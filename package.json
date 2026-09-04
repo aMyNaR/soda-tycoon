@@ -12,6 +12,7 @@
     "backend": "npm run dev --prefix backend",
     "bot": "npm run dev --prefix bot",
     "minapp": "npm run dev --prefix minapp",
+    "postinstall": "npm run setup",
     "admin": "npm run dev --prefix admin",
     "start": "npm run start --prefix backend",
     "test": "npm run test --prefix backend"
