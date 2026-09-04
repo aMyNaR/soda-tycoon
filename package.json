@@ -13,6 +13,7 @@
     "bot": "npm run dev --prefix bot",
     "minapp": "npm run dev --prefix minapp",
     "admin": "npm run dev --prefix admin",
+    "start": "npm run start --prefix backend",
     "test": "npm run test --prefix backend"
   }
 }
