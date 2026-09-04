@@ -14,6 +14,7 @@
     "db:seed": "node prisma/seed.js",
     "db:sqlite:generate": "prisma generate --schema=./prisma/schema.sqlite.prisma",
     "db:sqlite:push": "prisma db push --schema=./prisma/schema.sqlite.prisma",
+    "build": "echo 'No build step for backend'",
     "test": "node --test tests/game.test.js"
   },
   "prisma": {
