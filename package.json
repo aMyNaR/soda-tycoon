@@ -1,0 +1,18 @@
+{
+  "name": "soda-tycoon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SODA TYCOON - Telegram Mini App economy game (root workspace)",
+  "scripts": {
+    "setup": "npm install --prefix backend && npm install --prefix bot && npm install --prefix minapp && npm install --prefix admin",
+    "db:push": "npm run db:push --prefix backend",
+    "db:seed": "npm run db:seed --prefix backend",
+    "db:migrate": "npm run db:migrate --prefix backend",
+    "build": "npm run build --prefix backend && npm run build --prefix bot && npm run build --prefix minapp && npm run build --prefix admin",
+    "backend": "npm run dev --prefix backend",
+    "bot": "npm run dev --prefix bot",
+    "minapp": "npm run dev --prefix minapp",
+    "admin": "npm run dev --prefix admin",
+    "test": "npm run test --prefix backend"
+  }
+}

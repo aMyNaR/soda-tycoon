@@ -1,0 +1,770 @@
+// ══════════════════════════════════════════════════════════════
+//  SODA TYCOON — Database Schema (PostgreSQL / Prisma)
+//  تمام مدل‌های بازی: کاربران، کارخانه، تولید، بازار، اجتماع و ...
+// ══════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL_SQLITE")
+}
+
+// ─────────────────────────── Users & Profiles ───────────────────────────
+
+model User {
+  id              Int       @id @default(autoincrement())
+  telegramId      BigInt    @unique
+  username        String?
+  firstName       String?
+  lastName        String?
+  languageCode    String    @default("fa")
+  photoUrl        String?
+  isBanned        Boolean   @default(false)
+  banReason       String?
+  referredById    Int?
+  referrer        User?     @relation("Referrals", fields: [referredById], references: [id])
+  referrals       User[]    @relation("Referrals")
+  isAdmin         Boolean   @default(false)
+  role            String    @default("PLAYER") // PLAYER | SUPPORT | MODERATOR | ADMIN | SUPER_ADMIN
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+
+  profile         PlayerProfile?
+  factory         Factory?
+  productionRuns  ProductionRun[]
+  inventory       InventoryItem[]
+  deliveries      Delivery[]
+  transactions    Transaction[]
+  boosts          PlayerBoost[]
+  userAchievements PlayerAchievement[] @relation("UserAchievements")
+  playerMissions  PlayerMission[] @relation("UserMissions")
+  minigameScores  MinigameScore[]
+  minigameClaims  MinigameReward[]
+  notifications   Notification[]
+  promoUses       PromoCodeUse[]
+  tradeItems      TradeItem[] @relation("TradeItemOwner")
+  friendships1    Friendship[] @relation("Requester")
+  friendships2    Friendship[] @relation("Addressee")
+  giftsSent       Gift[]       @relation("GiftSender")
+  giftsReceived   Gift[]       @relation("GiftReceiver")
+  tradesSeller    Trade[]      @relation("Seller")
+  tradesBuyer     Trade[]      @relation("Buyer")
+  referralsMade   ReferralReward[] @relation("ReferralMaker")
+  referralRecvd   ReferralReward[] @relation("ReferralRecvr")
+  ledgerEntries   LedgerEntry[]
+  marketOrders    MarketOrder[] @relation("MarketOrderUser")
+  notificationsPref NotificationPref?
+  botMessages     BotOutbox[]
+  tutorialStep    Int       @default(0)
+  dailyClaim      DailyClaim?
+
+  @@map("users")
+}
+
+model PlayerProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  level           Int      @default(1)
+  xp              Int      @default(0)
+  coins           Int      @default(500) // Soda Coin
+  gems            Int      @default(5)   // Fizz Gem
+  title           String   @default("🥤 تازه‌کار نوشابه")
+  bio             String   @default("")
+  totalProduced   Int      @default(0)
+  totalSold       Int      @default(0)
+  totalEarnings   Int      @default(0)
+  collectionScore Int      @default(0)
+  streak          Int      @default(0)
+  lastDailyClaim  DateTime?
+  factoryLevel    Int      @default(1)
+  storageLevel    Int      @default(1)
+  warehouseUsed   Int      @default(0)
+  warehouseCap    Int      @default(100)
+  settings        String   @default("{}")
+  tutorialDone    Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  @@map("player_profiles")
+}
+
+model AdminUser {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  passwordHash  String
+  role          String   @default("ADMIN") // SUPER_ADMIN | ADMIN | MODERATOR | SUPPORT
+  createdAt     DateTime @default(now())
+  adminLogs     AdminLog[]
+
+  @@map("admin_users")
+}
+
+// ─────────────────────────── Factory ───────────────────────────
+
+model Factory {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  user         User     @relation(fields: [userId], references: [id])
+  tier         Int      @default(1) // 1..7 (کارگاه کوچک تا امپراتوری جهانی)
+  waterStation Int      @default(1) // 💧 تصفیه آب
+  sugarMill    Int      @default(1) // 🍬 بخش شکر
+  flavorLab    Int      @default(1) // 🧪 آزمایشگاه طعم
+  bottlePlant  Int      @default(1) // 🥤 بطری‌سازی
+  cappingUnit  Int      @default(1) // 🧢 درب‌بندی
+  packaging    Int      @default(1) // 📦 بسته‌بندی
+  cooler       Int      @default(1) // ❄️ خنک‌کننده
+  powerPlant   Int      @default(1) // ⚡ انرژی
+  updatedAt    DateTime @updatedAt
+
+  machines FactoryMachine[]
+
+  @@map("factories")
+}
+
+model FactoryMachine {
+  id         Int      @id @default(autoincrement())
+  factoryId  Int
+  factory    Factory  @relation(fields: [factoryId], references: [id])
+  kind       String   // WATER | SUGAR | FLAVOR | BOTTLE | CAP | PACK | COOLER | POWER
+  level      Int      @default(1)
+  upgradeEndsAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@unique([factoryId, kind])
+  @@map("factory_machines")
+}
+
+// ─────────────────────────── Game Content ───────────────────────────
+
+model Ingredient {
+  id         Int      @id @default(autoincrement())
+  key        String   @unique
+  name       String
+  emoji      String   @default("🍬")
+  kind       String   @default("RAW") // RAW | FLAVOR | BOTTLE | SPECIAL
+  basePrice  Int
+  price      Int      // قیمت لحظه‌ای بازار
+  rarity     String   @default("COMMON") // COMMON | UNCOMMON | RARE | EPIC | LEGENDARY
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  recipeItems RecipeIngredient[]
+  inventory   InventoryItem[]
+  marketOrders MarketOrder[] @relation("MarketOrderIngredient")
+
+  @@map("ingredients")
+}
+
+model Recipe {
+  id           Int      @id @default(autoincrement())
+  key          String   @unique
+  name         String
+  emoji        String   @default("🥤")
+  flavor       String   @default("COLA") // COLA | LEMON | ORANGE | GRAPE | STRAWBERRY | MANGO | APPLE | CHERRY | PINEAPPLE | BLUEBERRY | ENERGY | GALAXY | FIRE | ICE | RAINBOW | DIAMOND | ROYAL | COSMIC | CUSTOM
+  rarity       String   @default("COMMON")
+  requiredLevel Int     @default(1)
+  basePrice    Int
+  productionMs Int      @default(600000) // زمان تولید (میلی‌ثانیه)
+  batchSize    Int      @default(10)     // تعداد بطری در هر تولید
+  xpReward     Int      @default(10)
+  demand       Float    @default(1.0)    // ضریب تقاضا 0..2
+  qualityBonus Float    @default(0)      // درصد بهبود کیفیت
+  active       Boolean  @default(true)
+  eventOnly    Boolean  @default(false)
+  custom       Boolean  @default(false)  // ساخته‌شده در آزمایشگاه
+  creatorId    Int?
+  isSecret     Boolean  @default(false)
+  ingredients  RecipeIngredient[]
+  createdAt    DateTime @default(now())
+
+  productionRuns ProductionRun[]
+  marketOrders   MarketOrder[] @relation("MarketOrderRecipe")
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id           Int  @id @default(autoincrement())
+  recipeId     Int
+  recipe       Recipe @relation(fields: [recipeId], references: [id])
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Int  @default(1)
+
+  @@unique([recipeId, ingredientId])
+  @@map("recipe_ingredients")
+}
+
+model Soda {
+  id        Int    @id @default(autoincrement())
+  key       String @unique
+  name      String
+  emoji     String
+  rarity    String
+  flavor    String
+  basePrice Int
+  description String @default("")
+
+  @@map("sodas")
+}
+
+model Bottle {
+  id        Int    @id @default(autoincrement())
+  key       String @unique
+  name      String
+  emoji     String
+  rarity    String
+  value     Int
+  bonus     String? // JSON: {"type":"PRODUCTION","percent":5}
+  active    Boolean @default(true)
+
+  userBottles UserBottle[]
+
+  @@map("bottles")
+}
+
+model UserBottle {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  bottleId  Int
+  bottle    Bottle   @relation(fields: [bottleId], references: [id])
+  obtainedAt DateTime @default(now())
+  equipSlot Int?     // اسلات فعال
+
+  @@unique([userId, bottleId])
+  @@map("user_bottles")
+}
+
+// ─────────────────────────── Inventory & Production ───────────────────────────
+
+model InventoryItem {
+  id           Int  @id @default(autoincrement())
+  userId       Int
+  user         User @relation(fields: [userId], references: [id])
+  kind         String // INGREDIENT | SODA | BOX | GIFT
+  ingredientId Int?
+  ingredient   Ingredient? @relation(fields: [ingredientId], references: [id])
+  sodaId       Int? // جزئی — در آینده
+  key          String // کلید یکتای آیتم (ingredient key یا soda key)
+  name         String
+  emoji        String
+  quantity     Int  @default(0)
+  quality      Int  @default(50) // 0..100
+  metadata     String @default("{}")
+
+  @@unique([userId, kind, key])
+  @@index([userId])
+  @@map("inventory")
+}
+
+model ProductionRun {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id])
+  recipeId   Int
+  recipe     Recipe    @relation(fields: [recipeId], references: [id])
+  lineSlot   Int       @default(1)
+  batches    Int       @default(1)
+  status     String    @default("RUNNING") // RUNNING | DONE | COLLECTED
+  quality    Int       @default(50)
+  startsAt   DateTime  @default(now())
+  endsAt     DateTime
+  collectedAt DateTime?
+
+  @@index([userId, status])
+  @@map("production_runs")
+}
+
+// ─────────────────────────── Market & Cities ───────────────────────────
+
+model City {
+  id             Int    @id @default(autoincrement())
+  key            String @unique
+  name           String
+  emoji          String
+  requiredLevel  Int    @default(1)
+  priceMultiplier Float @default(1.0)
+  deliveryMs     Int    @default(3600000)
+  deliveryCost   Int    @default(100)
+  popularFlavor  String @default("COLA")
+  active         Boolean @default(true)
+
+  deliveries Delivery[]
+  marketOrders MarketOrder[] @relation("MarketOrderCity")
+
+  @@map("cities")
+}
+
+model MarketOrder {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation("MarketOrderUser", fields: [userId], references: [id])
+  kind        String   // BUY | SELL
+  itemType    String   // INGREDIENT | SODA
+  ingredientId Int?
+  ingredient  Ingredient? @relation("MarketOrderIngredient", fields: [ingredientId], references: [id])
+  sodaId      Int?
+  soda        Recipe?  @relation("MarketOrderRecipe", fields: [sodaId], references: [id])
+  recipeKey   String?
+  itemName    String
+  emoji       String
+  quantity    Int
+  unitPrice   Int
+  total       Int
+  cityId      Int?
+  city        City?    @relation("MarketOrderCity", fields: [cityId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("market_orders")
+}
+
+model Delivery {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  cityId     Int
+  city       City     @relation(fields: [cityId], references: [id])
+  vehicle    String   // TRUCK | SHIP | PLANE
+  itemName   String
+  itemKey    String
+  itemType   String
+  emoji      String
+  quantity   Int
+  cost       Int
+  revenue    Int
+  status     String   @default("TRANSIT") // TRANSIT | ARRIVED | CLAIMED
+  sentAt     DateTime @default(now())
+  arrivesAt  DateTime
+
+  @@index([userId, status])
+  @@map("deliveries")
+}
+
+// ─────────────────────────── Economy & Logs ───────────────────────────
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // PRODUCTION | SALE | PURCHASE | UPGRADE | REWARD | GIFT | TRADE | ADMIN_GRANT | REFERRAL | MINIGAME | BOOST | UNLOCK | DELIVERY | PROMO
+  currency  String   @default("COIN") // COIN | GEM | XP
+  amount    Int
+  balanceAfter Int  @default(0)
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@map("transactions")
+}
+
+model LedgerEntry {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  kind      String   // COIN | GEM | XP | INVENTORY | ACTION
+  delta     Int
+  source    String
+  refType   String?
+  refId     Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([kind])
+  @@map("ledger")
+}
+
+// ─────────────────────────── Boosts ───────────────────────────
+
+model Boost {
+  id       Int    @id @default(autoincrement())
+  key      String @unique
+  name     String
+  emoji    String
+  type     String // PRODUCTION_SPEED | SALE_PRICE | SHIP_SPEED | PRODUCTION_X2 | STORAGE | QUALITY
+  percent  Int    // مثلاً 50 یعنی ۵۰٪
+  durationMin Int
+  gemCost  Int
+  coinCost Int    @default(0)
+  active   Boolean @default(true)
+
+  playerBoosts PlayerBoost[]
+
+  @@map("boosts")
+}
+
+model PlayerBoost {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  user     User     @relation(fields: [userId], references: [id])
+  boostId  Int
+  boost    Boost    @relation(fields: [boostId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("player_boosts")
+}
+
+// ─────────────────────────── Social ───────────────────────────
+
+model Friendship {
+  id          Int      @id @default(autoincrement())
+  requesterId Int
+  requester   User     @relation("Requester", fields: [requesterId], references: [id])
+  addresseeId Int
+  addressee   User     @relation("Addressee", fields: [addresseeId], references: [id])
+  status      String   @default("PENDING") // PENDING | ACCEPTED | BLOCKED
+  createdAt   DateTime @default(now())
+
+  @@unique([requesterId, addresseeId])
+  @@map("friendships")
+}
+
+model Gift {
+  id        Int      @id @default(autoincrement())
+  senderId  Int
+  sender    User     @relation("GiftSender", fields: [senderId], references: [id])
+  receiverId Int
+  receiver  User     @relation("GiftReceiver", fields: [receiverId], references: [id])
+  kind      String   // INGREDIENT | SODA | BOX | BOOST
+  key       String
+  quantity  Int
+  message   String   @default("")
+  status    String   @default("SENT") // SENT | RECEIVED | CANCELLED
+  createdAt DateTime @default(now())
+
+  @@map("gifts")
+}
+
+model Trade {
+  id        Int      @id @default(autoincrement())
+  sellerId  Int      // پیشنهاددهنده
+  seller    User     @relation("Seller", fields: [sellerId], references: [id])
+  buyerId   Int?     // مقابل
+  buyer     User?    @relation("Buyer", fields: [buyerId], references: [id])
+  status    String   @default("OPEN") // OPEN | ACCEPTED | CANCELLED | EXPIRED
+  sellerConfirmed Boolean @default(true)
+  buyerConfirmed   Boolean @default(false)
+  createdAt DateTime @default(now())
+  closedAt  DateTime?
+  items     TradeItem[]
+
+  @@map("trades")
+}
+
+model TradeItem {
+  id           Int    @id @default(autoincrement())
+  tradeId      Int
+  trade        Trade  @relation(fields: [tradeId], references: [id])
+  ownerId      Int    // صاحب آیتم (User)
+  owner        User   @relation("TradeItemOwner", fields: [ownerId], references: [id])
+  side         String // OFFER | REQUEST
+  kind         String // INGREDIENT | SODA | COIN | GEM
+  key          String
+  quantity     Int
+  held         Boolean @default(false) // آیا escrow شده
+
+  @@map("trade_items")
+}
+
+model ReferralReward {
+  id         Int      @id @default(autoincrement())
+  referrerId Int
+  referrer   User     @relation("ReferralMaker", fields: [referrerId], references: [id])
+  refereeId  Int
+  referee    User     @relation("ReferralRecvr", fields: [refereeId], references: [id])
+  tier       String   // JOIN | LEVEL5 | LEVEL10
+  rewardCoins Int
+  rewardGems Int
+  createdAt  DateTime @default(now())
+
+  @@unique([referrerId, refereeId, tier])
+  @@map("referral_rewards")
+}
+
+// ─────────────────────────── Rewards, Missions, Achievements ───────────────────────────
+
+model DailyReward {
+  id       Int    @id @default(autoincrement())
+  day      Int    @unique // 1..7
+  kind     String // COIN | GEM | ITEM | BOOST | BOX
+  key      String @default("")
+  quantity Int
+  label    String
+  emoji    String
+
+  @@map("daily_rewards")
+}
+
+model DailyClaim {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+  user           User     @relation(fields: [userId], references: [id])
+  currentDay     Int      @default(0)
+  lastClaimDate  String?  // YYYY-MM-DD به وقت UTC
+  totalClaims    Int      @default(0)
+
+  @@map("daily_claims")
+}
+
+model Box {
+  id       Int    @id @default(autoincrement())
+  key      String @unique
+  name     String
+  emoji    String
+  rarity   String @default("COMMON")
+  coinCost Int    @default(0)
+  gemCost  Int    @default(0)
+  active   Boolean @default(true)
+  items    BoxItem[]
+
+  @@map("boxes")
+}
+
+model BoxItem {
+  id     Int    @id @default(autoincrement())
+  boxId  Int
+  box    Box    @relation(fields: [boxId], references: [id])
+  kind   String // INGREDIENT | COIN | GEM | BOOST | BOX | BOTTLE | SODA
+  key    String @default("")
+  label  String
+  emoji  String
+  quantity Int
+  weight Int    @default(10) // وزن احتمال
+
+  @@map("box_items")
+}
+
+model Achievement {
+  id          Int    @id @default(autoincrement())
+  key         String @unique
+  name        String
+  emoji       String
+  description String
+  condition   String   // {"type":"TOTAL_PRODUCED","target":100}
+  rewardCoins Int    @default(0)
+  rewardGems  Int    @default(0)
+  rewardXp    Int    @default(0)
+  title       String?
+  hidden      Boolean @default(false)
+
+  playerAchievements PlayerAchievement[]
+
+  @@map("achievements")
+}
+
+model PlayerAchievement {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation("UserAchievements", fields: [userId], references: [id])
+  achievementId Int
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime @default(now())
+
+  @@unique([userId, achievementId])
+  @@map("player_achievements")
+}
+
+model Mission {
+  id          Int    @id @default(autoincrement())
+  key         String @unique
+  kind        String @default("DAILY") // DAILY | WEEKLY | EVENT
+  name        String
+  emoji       String
+  description String
+  condition   String   // {"type":"PRODUCE","target":100}
+  rewardCoins Int    @default(0)
+  rewardGems  Int    @default(0)
+  rewardXp    Int    @default(0)
+  active      Boolean @default(true)
+
+  playerMissions PlayerMission[]
+
+  @@map("missions")
+}
+
+model PlayerMission {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation("UserMissions", fields: [userId], references: [id])
+  missionId  Int
+  mission    Mission  @relation(fields: [missionId], references: [id])
+  progress   Int      @default(0)
+  claimed    Boolean  @default(false)
+  periodKey  String   @default("") // 2026-01-05 یا 2026-W01
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, missionId, periodKey])
+  @@map("player_missions")
+}
+
+// ─────────────────────────── Events & Promo ───────────────────────────
+
+model GameEvent {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  name        String
+  emoji       String
+  description String   @default("")
+  config      String   @default("{}") // {priceMultiplier, xpMultiplier, limitedRecipeKeys:[], missionKeys:[]}
+  startsAt    DateTime
+  endsAt      DateTime
+  active      Boolean  @default(true)
+
+  @@map("events")
+}
+
+model PromoCode {
+  id         Int      @id @default(autoincrement())
+  code       String   @unique
+  kind       String   // COIN | GEM | ITEM | BOOST
+  key        String   @default("")
+  quantity   Int
+  maxUses    Int      @default(0) // 0 = بی‌نهایت
+  perUserLimit Int    @default(1)
+  usedCount  Int      @default(0)
+  expiresAt  DateTime?
+  active     Boolean  @default(true)
+  uses       PromoCodeUse[]
+
+  @@map("promo_codes")
+}
+
+model PromoCodeUse {
+  id        Int      @id @default(autoincrement())
+  promoId   Int
+  promo     PromoCode @relation(fields: [promoId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  usedAt    DateTime @default(now())
+
+  @@unique([promoId, userId])
+  @@map("promo_code_uses")
+}
+
+// ─────────────────────────── Leaderboard & Minigames ───────────────────────────
+
+model LeaderboardEntry {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  board     String   // WEALTH | FACTORY | PRODUCTION | COLLECTION | WEEKLY | DAILY | MONTHLY
+  periodKey String   @default("ALL") // ALL یا 2026-W01 یا 2026-01
+  score     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, board, periodKey])
+  @@map("leaderboard_entries")
+}
+
+model MinigameScore {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  game      String   // BOTTLE_RUSH | CAP_TOSS | FIZZ_REACTION | FACTORY_RUSH
+  score     Int
+  createdAt DateTime @default(now())
+
+  @@index([userId, game])
+  @@map("minigame_scores")
+}
+
+model MinigameReward {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  game      String
+  rewardCoins Int    @default(0)
+  rewardXp  Int      @default(0)
+  rewardGems Int     @default(0)
+  day       String   // YYYY-MM-DD
+  createdAt DateTime @default(now())
+
+  @@index([userId, game, day])
+  @@map("minigame_rewards")
+}
+
+// ─────────────────────────── Notifications & Bot Outbox ───────────────────────────
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  kind      String   // PRODUCTION | DELIVERY | REWARD | ACHIEVEMENT | EVENT | PROMO | FRIEND | SYSTEM
+  title     String
+  body      String   @default("")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model NotificationPref {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  production Boolean @default(true)
+  delivery   Boolean @default(true)
+  rewards    Boolean @default(true)
+  events     Boolean @default(true)
+  friends    Boolean @default(true)
+  system     Boolean @default(true)
+
+  @@map("notification_prefs")
+}
+
+model BotOutbox {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  text      String
+  kind      String   @default("SYSTEM")
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([sent])
+  @@map("bot_outbox")
+}
+
+// ─────────────────────────── Admin & Security Logs ───────────────────────────
+
+model AdminLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int?
+  admin     AdminUser? @relation(fields: [adminId], references: [id])
+  action    String
+  target    String   @default("")
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@map("admin_logs")
+}
+
+model SecurityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  telegramId BigInt?
+  kind      String   // AUTH_FAIL | RATE_LIMIT | CHEAT_SUSPECT | TRADE_EXPLOIT | INVALID_INITDATA
+  detail    String
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([kind])
+  @@map("security_logs")
+}
+
+// ─────────────────────────── Game Settings ───────────────────────────
+
+model GameSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("game_settings")
+}

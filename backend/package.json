@@ -1,0 +1,38 @@
+{
+  "name": "soda-tycoon-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SODA TYCOON Backend API (Express + Prisma)",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "node prisma/seed.js",
+    "db:sqlite:generate": "prisma generate --schema=./prisma/schema.sqlite.prisma",
+    "db:sqlite:push": "prisma db push --schema=./prisma/schema.sqlite.prisma",
+    "test": "node --test tests/game.test.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.2.1"
+  }
+}
