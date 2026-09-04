@@ -4,6 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "npm run db:push && npm start"
+    "startCommand": "npm start"
   }
 }
