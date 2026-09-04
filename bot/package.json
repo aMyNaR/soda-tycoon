@@ -6,6 +6,7 @@
   "main": "src/bot.js",
   "scripts": {
     "dev": "node --watch src/bot.js",
+    "build": "echo 'No build step for bot'",
     "start": "node src/bot.js"
   },
   "dependencies": {
