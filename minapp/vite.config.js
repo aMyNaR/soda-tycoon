@@ -8,3 +8,11 @@ export default defineConfig({
     host: true,
   },
 });
+export default defineConfig({
+  base: '/app/',
+  plugins: [react()],
+  server: {
+    port: 5174,
+    host: true,
+  },
+});
