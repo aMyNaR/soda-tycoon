@@ -40,6 +40,18 @@ async function adminLog(adminId, action, target = '', detail = '') {
   await prisma.adminLog.create({ data: { adminId, action, target, detail } });
 }
 
+// ⚠️ TEMP - فقط یکبار استفاده کن و بعد حذف کن!
+router.get('/create-super-admin', async (req, res) => {
+  const bcrypt = require('bcryptjs');
+  const hash = bcrypt.hashSync('admin123', 10);
+  const admin = await prisma.adminUser.upsert({
+    where: { username: 'admin' },
+    update: { passwordHash: hash },
+    create: { username: 'admin', passwordHash: hash, role: 'SUPER_ADMIN' }
+  });
+  res.json({ message: 'Admin created!', admin: { username: admin.username, role: admin.role } });
+});
+
 // ═════════ AUTH ═════════
 router.post('/login', authLimiter, async (req, res, next) => {
   try {
