@@ -38,7 +38,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
-if (process.env.NODE_ENV !== 'test') app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'test') app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ═════════ Health ═════════
 app.get('/health', (req, res) => res.json({ ok: true, service: 'soda-tycoon-backend', time: new Date().toISOString() }));

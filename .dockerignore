@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/dist
+**/dev.sqlite
+*.sqlite
+*.sqlite-journal
+.env
+.env.local
+*.log
+.DS_Store

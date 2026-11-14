@@ -1,0 +1,58 @@
+# ══════════════════════════════════════════════════════════════
+#  SODA TYCOON — اجرای محلی هم‌ارز Production (Docker Compose)
+#  اجرا: docker compose up --build
+#  سپس: http://localhost:3000/app (Mini App) و /admin (پنل)
+# ══════════════════════════════════════════════════════════════
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: soda
+      POSTGRES_PASSWORD: soda
+      POSTGRES_DB: soda_tycoon
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soda"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://soda:soda@postgres:5432/soda_tycoon
+      # ⚠️ این‌ها را قبل از اجرا مقداردهی کنید (یا در فایل .env بگذارید):
+      JWT_SECRET: ${JWT_SECRET:-change-me-long-random-secret}
+      BOT_API_KEY: ${BOT_API_KEY:-dev-bot-key}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      BACKEND_URL: http://localhost:3000
+      WEBAPP_URL: http://localhost:3000/app
+      ALLOW_DEV_AUTH: "false"
+    command: sh -c "npx prisma db push && node src/server.js"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      BOT_API_KEY: ${BOT_API_KEY:-dev-bot-key}
+      MINIAPP_URL: ${MINIAPP_URL:-http://localhost:3000/app}
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://backend:3000}
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
