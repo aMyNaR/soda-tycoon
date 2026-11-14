@@ -4,10 +4,10 @@ import { api } from '../api';
 import { Card, fmt, EmptyState } from '../ui';
 
 const GAMES = [
-  { key: 'BOTTLE_RUSH', name: 'Bottle Rush', emoji: '🥤', desc: 'در ۲۰ ثانیه، بطری‌های خواسته‌شده را لمس کن!' },
-  { key: 'CAP_TOSS', name: 'Cap Toss', emoji: '🧢', desc: 'وقتی نشانگر در ناحیه سبز است، ضربه بزن! ۵ پرتاب' },
-  { key: 'FIZZ_REACTION', name: 'Fizz Reaction', emoji: '⚡', desc: 'سریع‌ترین بازیکن باش — نوشابه درست را انتخاب کن!' },
-  { key: 'FACTORY_RUSH', name: 'Factory Rush', emoji: '🏭', desc: 'مراحل تولید را به ترتیب کامل کن!' },
+  { key: 'BOTTLE_RUSH', name: 'مسابقه بطری', emoji: '🥤', desc: 'در ۲۰ ثانیه، بطری‌های خواسته‌شده را لمس کن!' },
+  { key: 'CAP_TOSS', name: 'پرتاب درب', emoji: '🧢', desc: 'وقتی نشانگر در ناحیه سبز است، ضربه بزن! ۵ پرتاب' },
+  { key: 'FIZZ_REACTION', name: 'واکنش فیز', emoji: '⚡', desc: 'سریع‌ترین بازیکن باش — نوشابه درست را انتخاب کن!' },
+  { key: 'FACTORY_RUSH', name: 'کارخانه شلوغ', emoji: '🏭', desc: 'مراحل تولید را به ترتیب کامل کن!' },
 ];
 
 export default function MinigamesPage() {
@@ -41,7 +41,7 @@ export default function MinigamesPage() {
     <div>
       <div className="factory-visual" style={{ background: 'linear-gradient(160deg, #3b0764, #0f172a)' }}>
         <span className="fv-emoji">🎮</span>
-        <div className="fv-name">Mini Games</div>
+        <div className="fv-name">بازی‌های کوچک</div>
         <div className="muted" style={{ marginTop: 4 }}>بازی کن، امتیاز بگیر، پاداش ببر!</div>
       </div>
 
@@ -105,7 +105,7 @@ function BottleRush({ onExit }) {
 
   return (
     <div style={{ textAlign: 'center', padding: 20 }}>
-      <h2 style={{ margin: '10px 0' }}>🥤 Bottle Rush</h2>
+      <h2 style={{ margin: '10px 0' }}>🥤 مسابقه بطری</h2>
       <div className="muted">همه‌ی <span style={{ fontSize: 28 }}>{target}</span> ها را لمس کن!</div>
       <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--gold)', margin: '10px 0' }}>⏱ {time}s | امتیاز: {score}</div>
       <div className="grid-3">
@@ -159,7 +159,7 @@ function CapToss({ onExit }) {
 
   return (
     <div style={{ textAlign: 'center', padding: 20 }}>
-      <h2 style={{ margin: '10px 0' }}>🧢 Cap Toss</h2>
+      <h2 style={{ margin: '10px 0' }}>🧢 پرتاب درب</h2>
       <div className="muted">پرتاب {round}/۵ — ضربه بزن وقتی در سبز است!</div>
       <div style={{ position: 'relative', height: 30, background: 'var(--bg-3)', borderRadius: 15, margin: '20px 0', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${target.current}%`, width: '20%', background: 'rgba(52,211,153,.4)' }} />
@@ -204,7 +204,7 @@ function FizzReaction({ onExit }) {
 
   return (
     <div style={{ textAlign: 'center', padding: 20 }}>
-      <h2 style={{ margin: '10px 0' }}>⚡ Fizz Reaction</h2>
+      <h2 style={{ margin: '10px 0' }}>⚡ واکنش فیز</h2>
       <div className="muted">کدام نوشابه است؟</div>
       <div style={{ fontSize: 64, margin: '14px 0' }}>{asked.emoji}</div>
       <div style={{ fontWeight: 800, color: 'var(--gold)', marginBottom: 14 }}>⏱ {time}s | {score} امتیاز</div>
@@ -260,7 +260,7 @@ function FactoryRush({ onExit }) {
 
   return (
     <div style={{ textAlign: 'center', padding: 20 }}>
-      <h2 style={{ margin: '10px 0' }}>🏭 Factory Rush</h2>
+      <h2 style={{ margin: '10px 0' }}>🏭 کارخانه شلوغ</h2>
       <div className="muted">مراحل را به ترتیب لمس کن! مرحله {round}/۵</div>
       <div style={{ fontSize: 20, margin: '10px 0', letterSpacing: 6 }}>
         {seq.map((s, i) => (

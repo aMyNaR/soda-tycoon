@@ -9,10 +9,10 @@ export default function TopBar() {
 
   return (
     <div className="topbar">
-      <div className="avatar" onClick={() => go('profile')} style={{ cursor: 'pointer' }}>
+      <div className="avatar" onClick={() => go('profile')} style={{ cursor: 'pointer' }} role="button" aria-label="پروفایل">
         {user.photoUrl ? <img src={user.photoUrl} style={{ width: '100%', borderRadius: '50%' }} /> : '🥤'}
       </div>
-      <div className="level-badge" onClick={() => go('profile')} style={{ cursor: 'pointer' }}>
+      <div className="level-badge" onClick={() => go('profile')} style={{ cursor: 'pointer' }} role="button" aria-label="پروفایل">
         <span className="name">{title}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 800 }}>L{profile.level}</span>
@@ -24,7 +24,7 @@ export default function TopBar() {
       <div className="wallet">
         <div className="pill coin">🪙 {fmt(profile.coins)}</div>
         <div className="pill gem">💎 {fmt(profile.gems)}</div>
-        <div className="pill" onClick={() => go('settings')} style={{ cursor: 'pointer', position: 'relative' }}>
+        <div className="pill" onClick={() => go('settings')} style={{ cursor: 'pointer', position: 'relative' }} role="button" aria-label="تنظیمات و اعلان‌ها">
           ⚙️
           {unread > 0 && (
             <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--red)', color: '#fff', borderRadius: '50%', fontSize: 9, width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{unread}</span>

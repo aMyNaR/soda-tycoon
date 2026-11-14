@@ -21,6 +21,7 @@ export default function DeliveryPage() {
   const [qty, setQty] = useState(50);
   const [busy, setBusy] = useState(false);
   const { toast, refreshMe, refreshDashboard } = useStore();
+  const myLevel = useStore((s) => s.me?.profile?.level || 1);
 
   const load = async () => {
     try {
@@ -113,15 +114,21 @@ export default function DeliveryPage() {
               <RowItem emoji={item.emoji} title={item.name} sub={`موجودی: ${fmt(item.quantity)}`} onClick={() => setItem(null)} side="✏️" />
               <div className="muted" style={{ margin: '10px 0 6px' }}>وسیله نقلیه:</div>
               <div className="grid-3">
-                {Object.entries(VEHICLES).map(([k, v]) => (
-                  <div key={k} className={`stat-tile ${vehicle === k ? 'pulse' : ''}`}
-                    style={vehicle === k ? { borderColor: 'var(--fizz)' } : { opacity: sel.locked ? .5 : 1 }}
-                    onClick={() => setVehicle(k)}>
-                    <div style={{ fontSize: 20 }}>{v.name.split(' ')[0]}</div>
-                    <div className="l">ظرفیت {v.capacity}</div>
-                    <div className="l">{v.lvl > 1 ? `L${v.lvl}` : v.speed}</div>
-                  </div>
-                ))}
+                {Object.entries(VEHICLES).map(([k, v]) => {
+                  const locked = v.lvl > myLevel;
+                  return (
+                    <div key={k} className={`stat-tile ${vehicle === k ? 'pulse' : ''}`}
+                      style={vehicle === k ? { borderColor: 'var(--fizz)' } : locked ? { opacity: 0.4 } : {}}
+                      onClick={() => {
+                        if (locked) { toast(`🔒 ${v.name} در Level ${v.lvl} باز می‌شود`, 'error'); return; }
+                        setVehicle(k);
+                      }}>
+                      <div style={{ fontSize: 20 }}>{v.name.split(' ')[0]}</div>
+                      <div className="l">ظرفیت {v.capacity}</div>
+                      <div className="l">{locked ? `🔒 L${v.lvl}` : (v.lvl > 1 ? `L${v.lvl}` : v.speed)}</div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="muted" style={{ margin: '12px 0 6px' }}>تعداد (ظرفیت {VEHICLES[vehicle].capacity}):</div>
               <input className="input" type="number" min="1" max={Math.min(VEHICLES[vehicle].capacity, item.quantity)}

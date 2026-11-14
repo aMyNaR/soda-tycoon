@@ -58,7 +58,7 @@ export default function FactoryPage() {
           <span key={i} className="smoke" style={{ left: `${15 + i * 12}%`, animationDelay: `${i * 0.6}s` }} />
         ))}
         <span className="fv-emoji">{TIER_EMOJI[factory.tier]}</span>
-        <div className="fv-name">{tierInfo?.name || `Tier ${factory.tier}`}</div>
+        <div className="fv-name">{tierInfo?.name || `مرحله ${factory.tier}`}</div>
         <div className="muted" style={{ marginTop: 4 }}>
           {lines} خط تولید | {activeRuns} تولید فعال
         </div>

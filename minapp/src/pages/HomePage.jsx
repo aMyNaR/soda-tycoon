@@ -10,7 +10,7 @@ const FACTORY_TIERS = {
   4: { emoji: '🏢', name: 'کارخانه صنعتی' },
   5: { emoji: '🏛️', name: 'مگا کارخانه' },
   6: { emoji: '🌎', name: 'امپراتوری نوشابه' },
-  7: { emoji: '👑', name: 'SODA TYCOON HQ' },
+  7: { emoji: '👑', name: 'مقر SODA TYCOON' },
 };
 
 const MENU = [
@@ -47,7 +47,7 @@ export default function HomePage() {
         ))}
         <span className="fv-emoji">{tier.emoji}</span>
         <div className="fv-name">{tier.name}</div>
-        <div className="muted" style={{ marginTop: 4 }}>Tier {d?.profile?.factoryLevel || 1} — کارخانه شما</div>
+        <div className="muted" style={{ marginTop: 4 }}>مرحله {d?.profile?.factoryLevel || 1} — کارخانه شما</div>
       </div>
 
       {/* رویداد فعال */}
@@ -149,7 +149,7 @@ function ProductionRow({ p }) {
               await api.collectProduction(p.id);
               useStore.getState().toast('🥤 محصول به انبار اضافه شد!');
               useStore.getState().refreshDashboard();
-              useStore.getState().refreshMe();
+              useStore.getState().refreshMe().catch(() => {});
             } catch (e) {
               useStore.getState().toast(e.message, 'error');
             }
@@ -167,7 +167,22 @@ function DeliveryRow({ dv }) {
       emoji={dv.emoji}
       title={`${dv.cityEmoji} ${dv.city}`}
       sub={`${dv.quantity}× ${dv.itemName}`}
-      side={left ? <span className="badge blue">🚚 {left}</span> : <span className="badge green">رسید</span>}
+      side={
+        left ? (
+          <span className="badge blue">🚚 {left}</span>
+        ) : (
+          <button className="btn btn-green btn-sm" onClick={async () => {
+            try {
+              await api.claimDelivery(dv.id);
+              useStore.getState().toast('💰 درآمد تحویل دریافت شد!');
+              useStore.getState().refreshDashboard();
+              useStore.getState().refreshMe().catch(() => {});
+            } catch (e) {
+              useStore.getState().toast(e.message, 'error');
+            }
+          }}>💰 تحویل</button>
+        )
+      }
     />
   );
 }

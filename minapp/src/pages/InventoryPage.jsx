@@ -60,7 +60,7 @@ export default function InventoryPage() {
 
       {tab === 'BOX'
         ? inv.categories.BOX?.map((s) => (
-            <RowItem key={s.key} emoji={s.emoji} title={s.name} sub={`تعداد: ${fmt(s.quantity)}`} side={<span className="badge gold">در Shop باز کنید</span>} />
+            <RowItem key={s.key} emoji={s.emoji} title={s.name} sub={`تعداد: ${fmt(s.quantity)}`} side={<span className="badge gold">در فروشگاه باز کنید</span>} />
           ))
         : inv.categories[tab]?.map((s) => (
             <RowItem key={s.key} emoji={s.emoji} title={s.name} sub={`تعداد: ${fmt(s.quantity)}${tab === 'SODA' ? ` | کیفیت ${s.quality || 50}%` : ''}`} />

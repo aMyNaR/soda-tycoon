@@ -29,6 +29,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* دسترس‌پذیری: فوکوس دیداری + نشانگر روی المان‌های کلیکی */
+:focus-visible { outline: 2px solid var(--fizz); outline-offset: 2px; }
+button, [role="button"], [onclick] { cursor: pointer; }
+
 html, body, #root { height: 100%; }
 
 body {

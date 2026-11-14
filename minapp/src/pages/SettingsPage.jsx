@@ -25,8 +25,10 @@ export default function SettingsPage() {
   };
 
   const markRead = async () => {
-    await api.readNotifications();
-    await load(); await refreshMe();
+    try {
+      await api.readNotifications();
+      await load(); await refreshMe();
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   return (

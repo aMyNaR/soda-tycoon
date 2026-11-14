@@ -30,16 +30,16 @@ export default function ProfilePage() {
         }}>
           {user.photoUrl ? <img src={user.photoUrl} style={{ width: '100%', borderRadius: '50%' }} /> : '🥤'}
         </div>
-        <div className="fv-name">{user.username || user.firstName || 'Player'}</div>
+        <div className="fv-name">{user.username || user.firstName || 'بازیکن'}</div>
         <div style={{ color: 'var(--gold)', fontWeight: 800, marginTop: 4 }}>{title}</div>
-        <div className="muted" style={{ marginTop: 4 }}>User ID: #{user.id} — کد دعوت شما</div>
+        <div className="muted" style={{ marginTop: 4 }}>کد دعوت شما: #{user.id}</div>
       </div>
 
       {/* XP */}
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontWeight: 800 }}>⭐ Level {profile.level}</span>
-          <span className="muted">{fmt(levelInfo.xp)} XP — تا Level {profile.level + 1}: {fmt(levelInfo.xpToNext)}</span>
+          <span style={{ fontWeight: 800 }}>⭐ سطح {profile.level}</span>
+          <span className="muted">{fmt(levelInfo.xp)} XP — تا سطح {profile.level + 1}: {fmt(levelInfo.xpToNext)}</span>
         </div>
         <div className="progress-bar">
           <div style={{ width: `${Math.min(100, (levelInfo.xp / (levelInfo.xp + levelInfo.xpToNext || 1)) * 100)}%` }} />
@@ -48,25 +48,25 @@ export default function ProfilePage() {
 
       {/* آمار */}
       <div className="grid-2">
-        <div className="stat-tile"><div className="v">🪙 {fmt(profile.coins)}</div><div className="l">Soda Coin</div></div>
-        <div className="stat-tile"><div className="v">💎 {fmt(profile.gems)}</div><div className="l">Fizz Gem</div></div>
+        <div className="stat-tile"><div className="v">🪙 {fmt(profile.coins)}</div><div className="l">سکه نوشابه</div></div>
+        <div className="stat-tile"><div className="v">💎 {fmt(profile.gems)}</div><div className="l">گم فیز</div></div>
         <div className="stat-tile"><div className="v">🥤 {fmt(profile.totalProduced)}</div><div className="l">تولید کل</div></div>
         <div className="stat-tile"><div className="v">💰 {fmt(profile.totalSold)}</div><div className="l">فروش کل</div></div>
         <div className="stat-tile"><div className="v">💵 {fmt(profile.totalEarnings)}</div><div className="l">درآمد کل</div></div>
-        <div className="stat-tile"><div className="v">🧴 {fmt(profile.collectionScore)}</div><div className="l">Collection Score</div></div>
+        <div className="stat-tile"><div className="v">🧴 {fmt(profile.collectionScore)}</div><div className="l">امتیاز کلکسیون</div></div>
       </div>
 
       {/* کارخانه */}
       {factory && (
         <Card title="🏭 کارخانه">
-          <div className="muted">Tier {factory.factory.tier} | {factory.lines} خط تولید</div>
+          <div className="muted">مرحله {factory.factory.tier} | {factory.lines} خط تولید</div>
         </Card>
       )}
 
       {/* کلکسیون */}
       {collection && (
         <Card title="🧴 کلکسیون بطری">
-          <div className="muted">{collection.ownedCount} از {collection.total} بطری | Score: {fmt(collection.score)}</div>
+          <div className="muted">{collection.ownedCount} از {collection.total} بطری | امتیاز: {fmt(collection.score)}</div>
         </Card>
       )}
 

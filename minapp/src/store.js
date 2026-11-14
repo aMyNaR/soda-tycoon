@@ -77,7 +77,17 @@ export const useStore = create((set, get) => ({
   },
 
   refreshMe: async () => {
-    const me = await api.me();
+    let me;
+    try {
+      me = await api.me();
+    } catch (e) {
+      // توکن منقضی/نامعتبر یا بن‌شدگی → بازگشت به صفحه لاگین
+      if (e.code === 'UNAUTHORIZED' || e.code === 'INVALID_TOKEN' || e.code === 'BANNED') {
+        setToken(null);
+        set({ authed: false, needAuth: true, me: null });
+      }
+      throw e;
+    }
     // Level Up detection
     const prev = get().me;
     if (prev?.profile && me.profile.level > prev.profile.level) {

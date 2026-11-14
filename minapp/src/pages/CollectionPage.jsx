@@ -28,7 +28,7 @@ export default function CollectionPage() {
         <span className="fv-emoji">🧴</span>
         <div className="fv-name">Bottle Collection</div>
         <div className="muted" style={{ marginTop: 4 }}>
-          💎 Collection Score: {fmt(data.score)} | {data.ownedCount}/{data.total} بطری
+          💎 امتیاز کلکسیون: {fmt(data.score)} | {data.ownedCount}/{data.total} بطری
         </div>
       </div>
 
