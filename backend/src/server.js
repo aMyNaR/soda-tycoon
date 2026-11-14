@@ -2,6 +2,24 @@
 //  SODA TYCOON Backend Server
 // ══════════════════════════════════════════════════════════════
 require('dotenv').config();
+
+// ═════════ بررسی امنیتی هنگام Boot ═════════
+// جلوگیری از بالا آمدن سرور در Production با کلیدهای پیش‌فرض/ضعیف
+const PLACEHOLDER_SECRETS = ['dev-secret-change-me', 'CHANGE_ME_TO_A_LONG_RANDOM_SECRET'];
+const jwtSecret = process.env.JWT_SECRET || '';
+const botApiKey = process.env.BOT_API_KEY || '';
+if (process.env.NODE_ENV === 'production') {
+  const missing = [];
+  if (!jwtSecret || PLACEHOLDER_SECRETS.includes(jwtSecret)) missing.push('JWT_SECRET');
+  if (!botApiKey || botApiKey === 'dev-bot-key') missing.push('BOT_API_KEY');
+  if (missing.length) {
+    console.error('❌ توقف سرور: در Production باید متغیرهای امنیتی معتبر تنظیم شوند:', missing.join(', '));
+    process.exit(1);
+  }
+} else if (!jwtSecret || PLACEHOLDER_SECRETS.includes(jwtSecret) || !botApiKey || botApiKey === 'dev-bot-key') {
+  console.warn('⚠️ هشدار: از کلیدهای پیش‌فرض استفاده می‌شود (فقط برای توسعه). قبل از Production مقداردهی کنید.');
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

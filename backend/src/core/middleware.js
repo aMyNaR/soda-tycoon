@@ -48,4 +48,16 @@ const authLimiter = rateLimit({
   },
 });
 
-module.exports = { errorHandler, notFound, apiLimiter, strictLimiter, authLimiter };
+// Rate limiter مخصوص پنل ادمین (مسیرهای admin خارج از apiLimiter هستند)
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: async (req, res) => {
+    await logSecurity('RATE_LIMIT', `Admin rate limit: ${req.originalUrl}`, null, null, req.ip || '');
+    res.status(429).json({ error: 'RATE_LIMITED', message: 'درخواست‌های بیش از حد' });
+  },
+});
+
+module.exports = { errorHandler, notFound, apiLimiter, strictLimiter, authLimiter, adminLimiter };

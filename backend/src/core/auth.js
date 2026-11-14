@@ -2,8 +2,9 @@
 //  JWT Auth Middleware (Mini App users + Admin panel)
 // ══════════════════════════════════════════════════════════════
 const jwt = require('jsonwebtoken');
+const prisma = require('./prisma');
 
-const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'; // فقط توسعه — در Production توسط server.js مسدود می‌شود
 const EXPIRES = process.env.JWT_EXPIRES_IN || '30d';
 
 function signToken(payload, expiresIn = EXPIRES) {
@@ -19,15 +20,26 @@ function verifyToken(token) {
 }
 
 // ── احراز هویت بازیکن (Mini App) ──
-function requireUser(req, res, next) {
+async function requireUser(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'UNAUTHORIZED', message: 'توکن ارسال نشده است' });
 
   const payload = verifyToken(token);
-  if (!payload || payload.scope !== 'user') {
+  if (!payload || payload.scope !== 'user' || !payload.uid) {
     return res.status(401).json({ error: 'INVALID_TOKEN', message: 'توکن نامعتبر است' });
   }
+
+  // بررسی بن‌شدگی در هر درخواست (نه فقط هنگام ورود)
+  try {
+    const user = await prisma.user.findUnique({ where: { id: payload.uid }, select: { isBanned: true } });
+    if (!user || user.isBanned) {
+      return res.status(403).json({ error: 'BANNED', message: 'حساب شما مسدود شده است' });
+    }
+  } catch (e) {
+    return next(e);
+  }
+
   req.userId = payload.uid;
   req.userRole = payload.role || 'PLAYER';
   next();

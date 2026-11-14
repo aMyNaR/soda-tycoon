@@ -4,13 +4,16 @@
 // ══════════════════════════════════════════════════════════════
 const express = require('express');
 const prisma = require('../core/prisma');
+const { apiLimiter } = require('../core/middleware');
 
 const router = express.Router();
 
+router.use(apiLimiter);
+
 // ── Middleware کلید مشترک ──
 function requireBotKey(req, res, next) {
-  const key = req.headers['x-bot-key'] || req.query.key;
-  const expected = process.env.BOT_API_KEY || 'dev-bot-key';
+  const key = req.headers['x-bot-key'];
+  const expected = process.env.BOT_API_KEY || 'dev-bot-key'; // فقط توسعه — در Production توسط server.js مسدود می‌شود
   if (key !== expected) {
     return res.status(401).json({ error: 'INVALID_BOT_KEY' });
   }

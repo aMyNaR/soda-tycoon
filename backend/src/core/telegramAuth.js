@@ -18,9 +18,11 @@ function verifyInitData(initData, botToken) {
     .join('\n');
 
   const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const computed = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+  const computed = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest();
+  const expected = Buffer.from(hash, 'hex');
 
-  if (computed !== hash) return null;
+  // مقایسه ثابت‌زمان — جلوگیری از حملات Timing Attack
+  if (expected.length !== computed.length || !crypto.timingSafeEqual(computed, expected)) return null;
 
   // بررسی عدم انقضا (initData معتبر فقط ۲۴ ساعت است)
   const authDate = parseInt(params.get('auth_date') || '0', 10) * 1000;
