@@ -9,6 +9,15 @@ const { Telegraf, Markup } = require('telegraf');
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const MINIAPP_URL = (process.env.MINIAPP_URL || process.env.WEBAPP_URL || 'http://localhost:5174').trim();
 const API = (process.env.BACKEND_API_URL || process.env.BACKEND_URL || 'http://localhost:3000').trim();
+const BOT_KEY = process.env.BOT_API_KEY || '';
+
+// 🔐 همه درخواست‌های Bot به Backend باید کلید مشترک x-bot-key را داشته باشند
+function apiFetch(path, options = {}) {
+  return fetch(`${API}/api/v1/bot${path}`, {
+    ...options,
+    headers: { ...(options.headers || {}), 'x-bot-key': BOT_KEY },
+  });
+}
 
 if (!TOKEN || TOKEN.includes('PASTE_YOUR')) {
   console.error('❌ TELEGRAM_BOT_TOKEN تنظیم نشده است. فایل bot/.env را ویرایش کنید.');
@@ -78,7 +87,7 @@ bot.command('help', async (ctx) => {
 // ═════════ /profile ═════════
 bot.command('profile', async (ctx) => {
   try {
-    const res = await fetch(`${API}/api/v1/bot/profile/${ctx.from.id}`);
+    const res = await apiFetch(`/profile/${ctx.from.id}`);
     if (!res.ok) throw new Error('api');
     const data = await res.json();
     await ctx.reply(
@@ -112,7 +121,7 @@ bot.command('rewards', async (ctx) => {
 // ═════════ /referral ═════════
 bot.command('referral', async (ctx) => {
   try {
-    const res = await fetch(`${API}/api/v1/bot/profile/${ctx.from.id}`);
+    const res = await apiFetch(`/profile/${ctx.from.id}`);
     const data = await res.json();
     if (data.id) {
       await ctx.reply(
@@ -132,7 +141,7 @@ bot.command('referral', async (ctx) => {
 // ═════════ /leaderboard ═════════
 bot.command('leaderboard', async (ctx) => {
   try {
-    const res = await fetch(`${API}/api/v1/bot/leaderboard/WEALTH`);
+    const res = await apiFetch('/leaderboard/WEALTH');
     const data = await res.json();
     const rows = (data.rows || []).slice(0, 10).map((r) => `${r.rank}. ${r.name} — 🪙 ${r.score.toLocaleString('fa-IR')}`).join('\n');
     await ctx.reply(`🏆 **ثروتمندترین Tycoonها**\n\n${rows || 'هنوز بازیکنی نیست — تو اول باش!'}`, { parse_mode: 'Markdown', ...appUrlButton });
@@ -170,17 +179,22 @@ bot.catch((err, ctx) => {
 // ═════════ Outbox Worker — ارسال اعلان‌های صف‌شده ═════════
 async function processOutbox() {
   try {
-    const res = await fetch(`${API}/api/v1/bot/outbox`);
+    const res = await apiFetch('/outbox');
     if (!res.ok) return;
     const messages = await res.json();
     for (const m of messages) {
       try {
         const tgId = BigInt(m.telegramId);
         await bot.telegram.sendMessage(tgId.toString(), m.text);
-        await fetch(`${API}/api/v1/bot/outbox/${m.id}/sent`, { method: 'POST' });
+        await apiFetch(`/outbox/${m.id}/sent`, { method: 'POST' });
       } catch (e) {
-        // کاربر بات را بلاک کرده یا ID نامعتبر — علامت‌گذاری به عنوان ارسال‌شده
-        await fetch(`${API}/api/v1/bot/outbox/${m.id}/sent`, { method: 'POST' }).catch(() => {});
+        // خطای دائمی (کاربر بات را بلاک کرده — 403) → علامت‌گذاری برای جلوگیری از ازدحام صف
+        // خطاهای موقت → پیام در صف باقی می‌ماند و در چرخه بعدی دوباره تلاش می‌شود
+        if (e?.response?.error_code === 403) {
+          await apiFetch(`/outbox/${m.id}/sent`, { method: 'POST' }).catch(() => {});
+        } else {
+          console.error('outbox send failed (will retry), message', m.id, e.message);
+        }
       }
       await new Promise((r) => setTimeout(r, 50)); // rate limit تلگرام
     }

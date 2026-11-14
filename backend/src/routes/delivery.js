@@ -129,7 +129,12 @@ router.post('/claim', strictLimiter, async (req, res, next) => {
 
     const revenue = d.revenue;
     await prisma.$transaction(async (tx) => {
-      await tx.delivery.update({ where: { id: d.id }, data: { status: 'CLAIMED' } });
+      // به‌روزرسانی شرطی — تا دو درخواست هم‌زمان یک ارسال را دوبار تسویه نکنند
+      const claimed = await tx.delivery.updateMany({
+        where: { id: d.id, userId, status: 'TRANSIT' },
+        data: { status: 'CLAIMED' },
+      });
+      if (claimed.count !== 1) throw new EconomyError('ALREADY_CLAIMED', 'این ارسال قبلاً تسویه شده');
       await tx.playerProfile.update({
         where: { userId },
         data: { coins: { increment: revenue }, totalEarnings: { increment: revenue } },

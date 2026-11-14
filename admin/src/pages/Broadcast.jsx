@@ -20,7 +20,7 @@ export default function Broadcast({ showToast }) {
 function RealSend({ text, showToast, onClear }) {
   const [sending, setSending] = useState(false);
   return (
-    <button className="btn red" disabled={busy || sending || text.length < 3} onClick={async () => {
+    <button className="btn red" disabled={sending || text.length < 3} onClick={async () => {
       if (!confirm(`پیام به همه بازیکنان فعال ارسال شود؟\n\n"${text.slice(0, 100)}"`)) return;
       setSending(true);
       try {

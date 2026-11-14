@@ -31,7 +31,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const prisma = require('../core/prisma');
 const { signToken, requireAdmin } = require('../core/auth');
-const { addCoins, addGems, addItem, createNotification, EconomyError } = require('../core/economy');
+const { addCoins, addGems, spendCoins, spendGems, addItem, createNotification, EconomyError } = require('../core/economy');
 const { authLimiter, adminLimiter } = require('../core/middleware');
 
 const router = express.Router();
@@ -188,8 +188,16 @@ router.post('/users/:id/grant', requireAdmin('ADMIN'), async (req, res, next) =>
     const amt = parseInt(amount, 10);
     if (!amt || isNaN(amt)) throw new EconomyError('BAD_AMOUNT', 'مقدار نامعتبر');
     let newBal;
-    if (currency === 'GEM') newBal = await addGems(id, amt, 'ADMIN_GRANT', detail || `توسط ادمین ${req.admin.username}`);
-    else newBal = await addCoins(id, amt, 'ADMIN_GRANT', detail || `توسط ادمین ${req.admin.username}`);
+    // مقدار منفی یعنی کسر از حساب (با چک موجودی کافی)
+    if (amt < 0) {
+      const absAmt = Math.abs(amt);
+      if (currency === 'GEM') newBal = await spendGems(id, absAmt, 'ADMIN_GRANT', detail || `کسر توسط ادمین ${req.admin.username}`);
+      else newBal = await spendCoins(id, absAmt, 'ADMIN_GRANT', detail || `کسر توسط ادمین ${req.admin.username}`);
+    } else if (currency === 'GEM') {
+      newBal = await addGems(id, amt, 'ADMIN_GRANT', detail || `توسط ادمین ${req.admin.username}`);
+    } else {
+      newBal = await addCoins(id, amt, 'ADMIN_GRANT', detail || `توسط ادمین ${req.admin.username}`);
+    }
     await adminLog(req.admin.id, 'GRANT', `user:${id}`, `${currency} ${amt}`);
     await createNotification(id, 'SYSTEM', `🎁 هدیه ادمین!`, `${currency === 'GEM' ? '💎' : '🪙'} ${amt} به حساب شما اضافه شد`);
     res.json({ ok: true, newBalance: newBal });

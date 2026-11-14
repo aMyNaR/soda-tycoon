@@ -261,7 +261,12 @@ router.post('/trades/respond', strictLimiter, async (req, res, next) => {
         await tx.tradeItem.update({ where: { id: request.id }, data: { ownerId: userId, held: true } });
         await tx.transaction.create({ data: { userId, type: 'TRADE', currency: 'COIN', amount: -request.quantity, balanceAfter: profile.coins - request.quantity, detail: `trade #${trade.id}` } });
       }
-      await tx.trade.update({ where: { id: trade.id }, data: { buyerId: userId, status: 'ACCEPTED', buyerConfirmed: true, closedAt: new Date() } });
+      // به‌روزرسانی شرطی — فقط یک خریدار می‌تواند معامله باز را قبول کند
+      const accepted = await tx.trade.updateMany({
+        where: { id: trade.id, status: 'OPEN' },
+        data: { buyerId: userId, status: 'ACCEPTED', buyerConfirmed: true, closedAt: new Date() },
+      });
+      if (accepted.count !== 1) throw new EconomyError('NO_TRADE', 'معامله دیگر باز نیست');
     });
 
     // تسویه: OFFER به buyer، REQUEST به seller

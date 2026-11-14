@@ -278,11 +278,49 @@ router.post('/production/collect', strictLimiter, async (req, res, next) => {
     }
 
     const recipe = run.recipe;
-    // دریافت محصول به انبار
-    await addItem(userId, 'SODA', recipe.key, recipe.batchSize, {
-      name: recipe.name, emoji: recipe.emoji, quality: run.quality, rarity: recipe.rarity,
+
+    // ادعای شرطی + افزودن به انبار در یک تراکنش اتمیک (جلوگیری از جمع‌آوری دوباره)
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.productionRun.updateMany({
+        where: { id: run.id, userId, status: 'RUNNING', endsAt: { lte: new Date() } },
+        data: { status: 'COLLECTED', collectedAt: new Date() },
+      });
+      if (claimed.count !== 1) throw new EconomyError('ALREADY_COLLECTED', 'قبلاً دریافت شده');
+
+      const profile = await tx.playerProfile.findUnique({ where: { userId } });
+      if (!profile) throw new EconomyError('NO_PROFILE', 'پروفایل یافت نشد', 404);
+
+      const existing = await tx.inventoryItem.findUnique({
+        where: { userId_kind_key: { userId, kind: 'SODA', key: recipe.key } },
+      });
+
+      // کنترل ظرفیت انبار (منطق مشابه addItem)
+      const boosts = await tx.playerBoost.findMany({
+        where: { userId, expiresAt: { gt: new Date() }, boost: { type: 'STORAGE' } },
+        include: { boost: true },
+      });
+      const storageBoost = boosts.reduce((s, b) => s + b.boost.percent, 0);
+      const cap = 100 + (profile.storageLevel - 1) * 60;
+      const capWithBoost = Math.floor(cap * (1 + storageBoost / 100));
+      const used = existing ? profile.warehouseUsed : profile.warehouseUsed + recipe.batchSize;
+      if (used > capWithBoost) throw new EconomyError('WAREHOUSE_FULL', '📦 ظرفیت انبار پر است! آن را ارتقا دهید.');
+
+      if (existing) {
+        await tx.inventoryItem.update({
+          where: { id: existing.id },
+          data: { quantity: { increment: recipe.batchSize } },
+        });
+      } else {
+        await tx.inventoryItem.create({
+          data: {
+            userId, kind: 'SODA', key: recipe.key, quantity: recipe.batchSize,
+            name: recipe.name, emoji: recipe.emoji,
+            metadata: JSON.stringify({ quality: run.quality, rarity: recipe.rarity }),
+          },
+        });
+      }
+      await tx.playerProfile.update({ where: { userId }, data: { warehouseUsed: used } });
     });
-    await prisma.productionRun.update({ where: { id: run.id }, data: { status: 'COLLECTED', collectedAt: new Date() } });
 
     // آمار و XP
     await prisma.playerProfile.update({

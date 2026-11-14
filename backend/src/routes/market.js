@@ -125,10 +125,12 @@ router.post('/sell', strictLimiter, async (req, res, next) => {
       if (!invFresh || invFresh.quantity < qty) throw new EconomyError('INSUFFICIENT_ITEMS', 'انبار تغییر کرد — دوباره تلاش کنید');
 
       await prisma.$transaction(async (tx) => {
-        await tx.inventoryItem.update({
-          where: { id: invFresh.id },
+        // کم کردن شرطی — تا دو فروش هم‌زمان از موجودی یکسان سبقت نگیرند
+        const deducted = await tx.inventoryItem.updateMany({
+          where: { id: invFresh.id, quantity: { gte: qty } },
           data: { quantity: { decrement: qty } },
         });
+        if (deducted.count !== 1) throw new EconomyError('INSUFFICIENT_ITEMS', 'موجودی کافی نیست');
         await tx.playerProfile.update({
           where: { userId },
           data: {
@@ -175,10 +177,11 @@ router.post('/sell', strictLimiter, async (req, res, next) => {
       const total = unitPrice * qty;
 
       await prisma.$transaction(async (tx) => {
-        await tx.inventoryItem.update({
-          where: { id: inv.id },
+        const deducted = await tx.inventoryItem.updateMany({
+          where: { id: inv.id, quantity: { gte: qty } },
           data: { quantity: { decrement: qty } },
         });
+        if (deducted.count !== 1) throw new EconomyError('INSUFFICIENT_ITEMS', 'موجودی کافی نیست');
         await tx.playerProfile.update({
           where: { userId },
           data: { coins: { increment: total }, totalEarnings: { increment: total }, warehouseUsed: { decrement: qty } },
