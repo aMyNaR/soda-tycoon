@@ -1,45 +1,45 @@
 # 🥤 SODA TYCOON
 
-بازی اقتصادی کارخانه‌ای تلگرامی — از یک کارگاه کوچک نوشابه‌سازی تا **SODA TYCOON**!
+A Telegram-based factory and business simulation game — grow from a small soda workshop into a **SODA TYCOON**!
 
-> حلقه بازی: **درآمد → تولید → فروش → ارتقا → گسترش → رقابت**
+> Core gameplay loop: **Earn → Produce → Sell → Upgrade → Expand → Compete**
 
-[English](README.en.md) | **فارسی**
+[فارسی](README.fa.md) | **English**
 
 ---
 
-## 📖 فهرست
+## 📖 Table of Contents
 
-1. [معماری پروژه](#-معماری-پروژه)
-2. [پیش‌نیازها](#-پیشنیازها)
-3. [نصب و راه‌اندازی](#-نصب-و-راهاندازی)
-4. [ساخت Telegram Bot](#-ساخت-telegram-bot)
+1. [Project Architecture](#-project-architecture)
+2. [Requirements](#-requirements)
+3. [Installation and Setup](#-installation-and-setup)
+4. [Creating the Telegram Bot](#-creating-the-telegram-bot)
 5. [Environment Variables](#-environment-variables)
-6. [اجرا در حالت Development](#-اجرا-در-حالت-development)
-7. [Build و Production](#-build-و-production)
+6. [Development Mode](#-development-mode)
+7. [Build and Production](#-build-and-production)
 8. [Docker Deployment](#-docker-deployment)
-9. [تست‌ها](#-تستها)
-10. [داده اولیه (Seed)](#-داده-اولیه-seed)
-11. [امنیت](#-امنیت)
-12. [راهنمای ادمین](#-راهنمای-ادمین)
-13. [ساختار پوشه‌ها](#-ساختار-پوشهها)
+9. [Tests](#-tests)
+10. [Seed Data](#-seed-data)
+11. [Security](#-security)
+12. [Admin Guide](#-admin-guide)
+13. [Directory Structure](#-directory-structure)
 14. [Troubleshooting](#-troubleshooting)
 
 ---
 
-## 🏗 معماری پروژه
+## 🏗 Project Architecture
 
 ```
 ┌─────────────────┐         ┌──────────────────────────┐
 │   Telegram Bot  │◄───────►│   Telegram Users         │
 │  (bot/src/)     │         └──────────┬───────────────┘
-│  telegraf       │                    │ دکمه «ورود به بازی»
+│  telegraf       │                    │ "Play" button
 └────────┬────────┘                    ▼
          │ polling outbox            ┌──────────────────────────┐
          │ + internal API            │   Telegram Mini App      │
          ▼                           │   (minapp/src/)          │
 ┌─────────────────┐   REST + JWT      │   React SPA (Vite)       │
-│   Backend API   │◄─────────────────►│   ۱۵ صفحه بازی           │
+│   Backend API   │◄─────────────────►│   15 game pages          │
 │  (backend/src/) │                   └──────────────────────────┘
 │  Express        │                   ┌──────────────────────────┐
 │  Zod-less       │◄─────────────────►│   Admin Panel            │
@@ -50,46 +50,46 @@
 ┌─────────────────┐
 │   Database      │
 │  PostgreSQL     │
-│  (یا SQLite     │
-│   برای dev)     │
+│  (or SQLite     │
+│   for dev)      │
 │  Prisma ORM     │
 └─────────────────┘
 ```
 
-| بخش | تکنولوژی | نقش |
+| Component | Technology | Role |
 |---|---|---|
-| **Backend** | Node.js + Express + Prisma | تمام منطق بازی، اقتصاد، احراز هویت، ضد تقلب |
-| **Mini App** | React 18 + Vite + Zustand | محیط اصلی بازی (۱۵ صفحه) |
-| **Bot** | telegraf | رابط کمکی، اعلان‌ها، هدایت به Mini App |
-| **Admin Panel** | React 18 + Vite | مدیریت کاربران، اقتصاد، محتوا، رویدادها |
-| **Database** | PostgreSQL (production) / SQLite (dev) | ذخیره‌سازی دائمی — ۳۲ مدل |
+| **Backend** | Node.js + Express + Prisma | All game logic, economy, authentication, anti-cheat |
+| **Mini App** | React 18 + Vite + Zustand | Main game environment (15 pages) |
+| **Bot** | telegraf | Helper interface, notifications, routing to the Mini App |
+| **Admin Panel** | React 18 + Vite | User, economy, content, and event management |
+| **Database** | PostgreSQL (production) / SQLite (dev) | Persistent storage — 32 models |
 
-**نکته امنیتی مهم:** هیچ منطق اقتصادی سمت Client نیست. Client فقط «Action» می‌فرستد؛ سرور مقدار را محاسبه و در Transaction دیتابیس اعمال می‌کند.
+**Important security note:** No economic logic runs on the client. The client only sends an "Action"; the server calculates the value and applies it in a database transaction.
 
 ---
 
-## ⚙️ پیش‌نیازها
+## ⚙️ Requirements
 
-| نرم‌افزار | نسخه | لینک |
+| Software | Version | Link |
 |---|---|---|
-| Node.js | **18+** (تست‌شده با 24) | https://nodejs.org |
-| PostgreSQL | **14+** (فقط production) | https://www.postgresql.org/download/ |
-| npm | همراه Node | — |
+| Node.js | **18+** (tested with 24) | https://nodejs.org |
+| PostgreSQL | **14+** (production only) | https://www.postgresql.org/download/ |
+| npm | Included with Node | — |
 
-> 💡 **بدون PostgreSQL هم می‌توانید شروع کنید!** پروژه با SQLite برای development اجرا می‌شود (فایل `backend/prisma/dev.sqlite` ساخته می‌شود).
+> 💡 **You can start even without PostgreSQL!** The project runs with SQLite for development (the `backend/prisma/dev.sqlite` file is created).
 
 ---
 
-## 🚀 نصب و راه‌اندازی
+## 🚀 Installation and Setup
 
-### ۱. نصب وابستگی‌ها
+### 1. Install dependencies
 
 ```bash
-# از ریشه پروژه — همه ۴ بخش:
+# From the project root — all 4 components:
 npm run setup
 ```
 
-یا دستی:
+Or manually:
 
 ```bash
 cd backend && npm install && cd ..
@@ -98,9 +98,9 @@ cd admin && npm install && cd ..
 cd bot && npm install && cd ..
 ```
 
-### ۲. تنظیم Environment Variables
+### 2. Configure environment variables
 
-از فایل نمونه کپی کنید:
+Copy from the example file:
 
 ```bash
 # Windows PowerShell
@@ -112,13 +112,13 @@ cp .env.example backend/.env
 cp .env.example bot/.env
 ```
 
-سپس `backend/.env` و `bot/.env` را ویرایش کنید (بخش [Environment Variables](#-environment-variables)).
+Then edit `backend/.env` and `bot/.env` (see [Environment Variables](#-environment-variables)).
 
-> ⚠️ **حداقل این‌ها را تغییر دهید:** `JWT_SECRET` و `TELEGRAM_BOT_TOKEN`
+> ⚠️ **At minimum, change these:** `JWT_SECRET` and `TELEGRAM_BOT_TOKEN`
 
-### ۳. ساخت Database
+### 3. Set up the database
 
-**گزینه A — SQLite (بدون نصب PostgreSQL — برای تست و توسعه):**
+**Option A — SQLite (no PostgreSQL installation — for testing and development):**
 
 ```bash
 cd backend
@@ -127,10 +127,10 @@ npm run db:sqlite:push
 npm run db:seed
 ```
 
-**گزینه B — PostgreSQL (production):**
+**Option B — PostgreSQL (production):**
 
 ```bash
-# اول دیتابیس بسازید:
+# First create the database:
 # psql -U postgres -c "CREATE DATABASE soda_tycoon;"
 
 cd backend
@@ -139,102 +139,103 @@ npm run db:push
 npm run db:seed
 ```
 
-### ۴. ساخت اکانت ادمین اول
+### 4. Create the first admin account
 
 ```bash
 cd backend
 node scripts/createAdmin.js owner YOUR_STRONG_PASSWORD SUPER_ADMIN
 ```
 
-### ۵. اجرای همه سرویس‌ها
+### 5. Start all services
 
-هر سرویس در یک ترمینال جدا:
+Each service in a separate terminal:
 
 ```bash
-# ترمینال ۱ — Backend (پورت 3000)
+# Terminal 1 — Backend (port 3000)
 cd backend && npm run dev
 
-# ترمینال ۲ — Mini App (پورت 5174)
+# Terminal 2 — Mini App (port 5174)
 cd minapp && npm run dev
 
-# ترمینال ۳ — Admin Panel (پورت 5175)
+# Terminal 3 — Admin Panel (port 5175)
 cd admin && npm run dev
 
-# ترمینال ۴ — Bot (فقط با Token واقعی)
+# Terminal 4 — Bot (only with a real token)
 cd bot && npm run dev
 ```
 
-حالا:
-- 🥤 Mini App: **http://localhost:5174** (حالت dev به‌صورت خودکار با کاربر تستی وارد می‌شود)
+Now:
+
+- 🥤 Mini App: **http://localhost:5174** (dev mode automatically signs in with a test user)
 - 🛠️ Admin Panel: **http://localhost:5175**
 - ⚙️ API: **http://localhost:3000/api/v1**
 
-> 💡 **تست بدون تلگرام:** در `backend/.env` مقدار `ALLOW_DEV_AUTH=true` باعث می‌شود Mini App با کاربر تستی وارد شود. برای production این را `false` کنید!
+> 💡 **Testing without Telegram:** Setting `ALLOW_DEV_AUTH=true` in `backend/.env` makes the Mini App sign in with a test user. Set it to `false` for production!
 
 ---
 
-## 🤖 ساخت Telegram Bot
+## 🤖 Creating the Telegram Bot
 
-### گام‌به‌گام
+### Step by step
 
-1. در تلگرام به **@BotFather** پیام بدهید
-2. دستور `/newbot` را بزنید
-3. یک نام نمایشی بدهید (مثلاً `Soda Tycoon Game`)
-4. یک username بدهید (باید با `bot` تمام شود، مثلاً `soda_tycoon_game_bot`)
-5. BotFather یک **Token** می‌دهد — شبیه:
+1. In Telegram, message **@BotFather**
+2. Send the `/newbot` command
+3. Give it a display name (for example, `Soda Tycoon Game`)
+4. Give it a username (it must end in `bot`, for example `soda_tycoon_game_bot`)
+5. BotFather gives you a **Token** — similar to:
    ```
    1234567890:AAH3x9kQ...your-token-here
    ```
-6. Token را در **`bot/.env`** قرار دهید:
+6. Put the token in **`bot/.env`**:
    ```env
    TELEGRAM_BOT_TOKEN=1234567890:AAH3x9kQ...
    ```
-   و در **`backend/.env`** هم همان Token (برای احراز هویت Mini App):
+   And the same token in **`backend/.env`** (for Mini App authentication):
    ```env
    TELEGRAM_BOT_TOKEN=1234567890:AAH3x9kQ...
    ```
 
-> 🔴 **هرگز Token را در Git commit نکنید!** فایل‌های `.env` در `.gitignore` هستند.
+> 🔴 **Never commit a token to Git!** `.env` files are in `.gitignore`.
 
-### اتصال Mini App به Bot
+### Connect the Mini App to the bot
 
-به BotFather برگردید:
+Return to BotFather:
 
 ```
 /newapp
-→ بات را انتخاب کنید
-→ یک دکمه وب‌اپ بسازید یا از منوی Bot Settings → Menu Button استفاده کنید
-→ URL را بدهید: https://your-domain.com/app
+→ Select your bot
+→ Create a Web App button, or use Bot Settings → Menu Button
+→ Set the URL: https://your-domain.com/app
 ```
 
-یا با دستور:
+Or with the command:
 
 ```
-/setmenubutton → بات را انتخاب کنید → متن دکمه: 🥤 ورود به SODA TYCOON → URL: https://your-domain.com/app
+/setmenubutton → Select your bot → Button text: 🥤 Play SODA TYCOON → URL: https://your-domain.com/app
 ```
 
-### تنظیم دستورات Bot
+### Configure bot commands
 
-به BotFather:
-
-```
-/setcommands → بات را انتخاب کنید → این لیست را بفرستید:
-```
+In BotFather:
 
 ```
-start - شروع بازی
-play - ورود به بازی
-profile - پروفایل من
-daily - پاداش روزانه
-rewards - پاداش‌ها و مأموریت‌ها
-referral - دعوت دوستان
-leaderboard - جدول رتبه‌بندی
-shop - فروشگاه
-codes - کدهای هدیه
-help - راهنما
+/setcommands → Select your bot → Send this list:
 ```
 
-> 💡 Bot تلگرام فقط در HTTPS کار می‌کند. برای تست محلی، Mini App از `http://localhost:5174` استفاده می‌کند که در حالت dev تلگرام قابل باز شدن است (با `ngrok` یا مستقیم در Telegram Desktop). برای production حتماً HTTPS بدهید.
+```
+start - Start the game
+play - Enter the game
+profile - My profile
+daily - Daily reward
+rewards - Rewards and missions
+referral - Invite friends
+leaderboard - Leaderboard
+shop - Shop
+codes - Gift codes
+help - Help
+```
+
+> 💡 Telegram bots only work over HTTPS. For local testing, the Mini App uses `http://localhost:5174`, which in dev mode can be opened in Telegram (with `ngrok` or directly in Telegram Desktop). For production, be sure to use HTTPS.
 
 ---
 
@@ -242,93 +243,95 @@ help - راهنما
 
 ### `backend/.env`
 
-| متغیر | توضیح | مثال | محرمانه؟ |
+| Variable | Description | Example | Secret? |
 |---|---|---|---|
-| `PORT` | پورت Backend | `3000` | ❌ |
-| `NODE_ENV` | `development` یا `production` | `development` | ❌ |
-| `JWT_SECRET` | کلید امضای JWT — **حتماً تغییر دهید** | رشته تصادفی ۶۴ کاراکتر | ✅ **بله** |
-| `JWT_EXPIRES_IN` | مدت اعتبار توکن بازیکن | `30d` | ❌ |
-| `DATABASE_URL` | اتصال PostgreSQL | `postgresql://postgres:pass@localhost:5432/soda_tycoon` | ✅ بله |
-| `DATABASE_URL_SQLITE` | فایل SQLite (حالت dev) | `file:./dev.sqlite` | ❌ |
-| `TELEGRAM_BOT_TOKEN` | Token بات (برای verify initData) | از BotFather | ✅ **بله** |
-| `BACKEND_URL` | آدرس عمومی Backend | `https://api.your-domain.com` | ❌ |
-| `WEBAPP_URL` | آدرس عمومی Mini App | `https://your-domain.com/app` | ❌ |
-| `BOT_API_KEY` | کلید مشترک Bot↔Backend | رشته تصادفی | ✅ بله |
-| `ALLOW_DEV_AUTH` | ورود تستی بدون تلگرام — فقط dev! | `false` | — |
-| `RATE_LIMIT_MAX` | حداکثر درخواست در دقیقه برای هر IP | `120` | ❌ |
+| `PORT` | Backend port | `3000` | ❌ |
+| `NODE_ENV` | `development` or `production` | `development` | ❌ |
+| `JWT_SECRET` | JWT signing key — **be sure to change it** | Random 64-character string | ✅ **Yes** |
+| `JWT_EXPIRES_IN` | Player token lifetime | `30d` | ❌ |
+| `DATABASE_URL` | PostgreSQL connection | `postgresql://postgres:pass@localhost:5432/soda_tycoon` | ✅ Yes |
+| `DATABASE_URL_SQLITE` | SQLite file (dev mode) | `file:./dev.sqlite` | ❌ |
+| `TELEGRAM_BOT_TOKEN` | Bot token (for verifying initData) | From BotFather | ✅ **Yes** |
+| `BACKEND_URL` | Public backend URL | `https://api.your-domain.com` | ❌ |
+| `WEBAPP_URL` | Public Mini App URL | `https://your-domain.com/app` | ❌ |
+| `BOT_API_KEY` | Shared Bot↔Backend key | Random string | ✅ Yes |
+| `ALLOW_DEV_AUTH` | Test login without Telegram — dev only! | `false` | — |
+| `RATE_LIMIT_MAX` | Maximum requests per minute per IP | `120` | ❌ |
 
-تولید JWT_SECRET تصادفی:
+Generate a random JWT_SECRET:
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
 ### `bot/.env`
 
-| متغیر | توضیح | محرمانه؟ |
+| Variable | Description | Secret? |
 |---|---|---|
-| `TELEGRAM_BOT_TOKEN` | Token بات از BotFather | ✅ بله |
-| `MINIAPP_URL` | آدرس Mini App (دکمه ورود) | ❌ |
-| `BACKEND_API_URL` | آدرس Backend برای اعلان‌ها | ❌ |
-| `BOT_API_KEY` | باید با backend یکی باشد | ✅ بله |
+| `TELEGRAM_BOT_TOKEN` | Bot token from BotFather | ✅ Yes |
+| `MINIAPP_URL` | Mini App URL (launch button) | ❌ |
+| `BACKEND_API_URL` | Backend URL for notifications | ❌ |
+| `BOT_API_KEY` | Must match the backend | ✅ Yes |
 
-### `minapp/.env` و `admin/.env`
+### `minapp/.env` and `admin/.env`
 
-| متغیر | توضیح |
+| Variable | Description |
 |---|---|
-| `VITE_BACKEND_URL` (minapp) | آدرس API |
-| `VITE_API_URL` (admin) | آدرس API |
-| `VITE_WEBAPP_URL` (admin) | آدرس Mini App |
+| `VITE_BACKEND_URL` (minapp) | API URL |
+| `VITE_API_URL` (admin) | API URL |
+| `VITE_WEBAPP_URL` (admin) | Mini App URL |
 
 ---
 
-## 💻 اجرا در حالت Development
+## 💻 Development Mode
 
 ```bash
-npm run backend   # Backend با auto-reload (node --watch)
-npm run minapp    # Mini App با HMR (Vite)
-npm run admin     # Admin Panel با HMR
+npm run backend   # Backend with auto-reload (node --watch)
+npm run minapp    # Mini App with HMR (Vite)
+npm run admin     # Admin Panel with HMR
 npm run bot       # Bot
 ```
 
-**جریان تست محلی:**
-1. Backend روی 3000 بالا بیاید
-2. مرورگر: `http://localhost:5174` → به‌خاطر `ALLOW_DEV_AUTH=true` خودکار وارد می‌شوید
-3. Tutorial ۵ مرحله‌ای نمایش داده می‌شود
-4. Classic Cola تولید کنید → از بازار مواد بخرید → بفروشید → ارتقا دهید
+**Local testing flow:**
+
+1. Start the backend on 3000
+2. Browser: `http://localhost:5174` → thanks to `ALLOW_DEV_AUTH=true` you are signed in automatically
+3. The 5-step tutorial is shown
+4. Produce Classic Cola → buy ingredients from the market → sell → upgrade
 
 ---
 
-## 📦 Build و Production
+## 📦 Build and Production
 
-### Build فرانت‌اندها
+### Build the frontends
 
 ```bash
 npm run build
-# خروجی: minapp/dist و admin/dist
-# Backend به‌صورت خودکار این‌ها را serve می‌کند:
-#   Mini App  →  https://your-domain.com/app
-#   Admin     →  https://your-domain.com/admin
+# Output: minapp/dist and admin/dist
+# The backend automatically serves them:
+#   Mini App → https://your-domain.com/app
+#   Admin → https://your-domain.com/admin
 ```
 
-### اجرا با Node مستقیم
+### Run directly with Node
 
 ```bash
 cd backend
 NODE_ENV=production node src/server.js
 ```
 
-### نکات Production
+### Production tips
 
-- ✅ `ALLOW_DEV_AUTH=false` (حیاتی!)
+- ✅ `ALLOW_DEV_AUTH=false` (critical!)
 - ✅ `NODE_ENV=production`
-- ✅ `JWT_SECRET` قوی و یکتا
-- ✅ PostgreSQL به‌جای SQLite
-- ✅ HTTPS اجباری (تلگرام Mini App فقط HTTPS می‌پذیرد)
-- ✅ Reverse proxy با Nginx/Caddy
+- ✅ Strong, unique `JWT_SECRET`
+- ✅ PostgreSQL instead of SQLite
+- ✅ HTTPS is mandatory (Telegram Mini App only accepts HTTPS)
+- ✅ Reverse proxy with Nginx/Caddy
 
 ### Docker Deployment
 
-`Dockerfile` بسازید:
+Create a `Dockerfile`:
 
 ```dockerfile
 FROM node:20-alpine
@@ -348,85 +351,86 @@ docker run -d -p 3000:3000 --env-file backend/.env soda-backend
 
 ---
 
-## 🧪 تست‌ها
+## 🧪 Tests
 
 ```bash
 cd backend
 npm test
 ```
 
-۱۴ تست شامل:
-- ✅ احراز هویت Telegram initData (تأیید، hash جعلی، token اشتباه، انقضا)
-- ✅ JWT (ساخت، تأیید، token جعلی، سلسله‌مراتب Role)
-- ✅ سیستم Level/XP (monotonic، عنوان‌ها)
-- ✅ کلیدهای دوره‌ای لیدربورد (روزانه/هفتگی/ماهانه)
+14 tests including:
 
-**تست Integration با سرور واقعی:**
+- ✅ Telegram initData authentication (verification, forged hash, wrong token, expiration)
+- ✅ JWT (creation, verification, forged token, role hierarchy)
+- ✅ Level/XP system (monotonic, titles)
+- ✅ Leaderboard period keys (daily/weekly/monthly)
+
+**Integration tests with a real server:**
 
 ```bash
-# سرور بالا باشد، سپس:
+# Server must be up, then:
 TEST_INTEGRATION=true npm test
 ```
 
-شامل: 401 بدون token، مسدودسازی Coin Injection، مسدودسازی تولید بدون مواد، مسدودسازی سرقت زمانی collect، امتیاز غیرممکن مینی‌گیم، promo تکراری، daily دوباره‌claim، رد شدن admin بدون رمز.
+Including: 401 without a token, Coin Injection blocked, production without ingredients blocked, collection time-theft blocked, impossible mini-game score, duplicate promo, repeated daily claim, admin rejected without a password.
 
 ---
 
-## 🌱 داده اولیه (Seed)
+## 🌱 Seed Data
 
-اجرا: `npm run db:seed` (داخل backend)
+Run: `npm run db:seed` (inside `backend`)
 
-| محتوا | تعداد |
+| Content | Count |
 |---|---|
-| 🍬 Ingredients | ۲۰ (آب، شکر، CO₂، بطری، ۱۰ طعم، مواد ویژه) |
-| 📖 Recipes | ۲۲ (Classic Cola تا Infinite Soda + فرمول مخفی) |
-| 🧴 Bottles | ۱۰ (Common تا Mythic) |
-| 🌎 Cities | ۸ (تهران تا سئول) |
-| 🏅 Achievements | ۱۲ |
-| 🎯 Missions | ۱۰ (روزانه + هفتگی + رویداد) |
-| 🎁 Daily Rewards | ۷ روز |
-| 📦 Boxes | ۴ (Soda تا Legendary) |
-| ⚡ Boosts | ۶ |
-| 🎟️ Promo Codes | ۴ (SODA2026, FIZZ2026, LAUNCHDAY, COLA1000) |
-| 🎉 Events | ۳ |
-| ⚙️ Game Settings | ۱۸+ تنظیم قابل ویرایش از پنل |
+| 🍬 Ingredients | 20 (water, sugar, CO₂, bottles, 10 flavors, special ingredients) |
+| 📖 Recipes | 22 (Classic Cola to Infinite Soda + secret formula) |
+| 🧴 Bottles | 10 (Common to Mythic) |
+| 🌎 Cities | 8 (Tehran to Seoul) |
+| 🏅 Achievements | 12 |
+| 🎯 Missions | 10 (daily + weekly + event) |
+| 🎁 Daily Rewards | 7 days |
+| 📦 Boxes | 4 (Soda to Legendary) |
+| ⚡ Boosts | 6 |
+| 🎟️ Promo Codes | 4 (SODA2026, FIZZ2026, LAUNCHDAY, COLA1000) |
+| 🎉 Events | 3 |
+| ⚙️ Game Settings | 18+ editable settings from the panel |
 
 ---
 
-## 🔒 امنیت
+## 🔒 Security
 
-### طراحی ضد تقلب (همه سمت سرور)
+### Anti-cheat design (all server-side)
 
-| تهدید | دفاع پیاده‌سازی‌شده |
+| Threat | Implemented defense |
 |---|---|
-| Coin/Gem Injection | Client فقط Action می‌فرستد؛ مقدار از DB/Seed خوانده می‌شود (`backend/src/core/economy.js`) |
-| Fake Telegram Data | verify HMAC-SHA256 initData + انقضای ۲۴ ساعت (`backend/src/core/telegramAuth.js`) |
-| Timer Manipulation | همه زمان‌ها با `new Date()` سرور چک می‌شوند (`production/collect`, `delivery/claim`) |
-| Double Claim | `ALREADY_CLAIMED` با unique constraint دیتابیس (daily, promo, mission) |
-| Mini Game Cheat | سقف امتیاز + چک مدت زمان + rate limit + log امنیتی |
-| Trade Duplication | escrow در تراکنش اتمیک (`social.js /trades/respond`) |
-| Warehouse Overflow | چک ظرفیت در `addItem` سمت سرور |
-| Referral Abuse | unique `[referrerId, refereeId, tier]` + ban check |
-| Rate Abuse | express-rate-limit (عمومی ۱۲۰/min، strict ۳۰/min، auth ۲۰/min) |
+| Coin/Gem injection | Client only sends an Action; the value is read from DB/Seed (`backend/src/core/economy.js`) |
+| Fake Telegram data | HMAC-SHA256 initData verification + 24-hour expiration (`backend/src/core/telegramAuth.js`) |
+| Timer manipulation | All times are checked with the server's `new Date()` (`production/collect`, `delivery/claim`) |
+| Double claim | `ALREADY_CLAIMED` with a database unique constraint (daily, promo, mission) |
+| Mini-game cheat | Score cap + duration check + rate limit + security log |
+| Trade duplication | Escrow in an atomic transaction (`social.js /trades/respond`) |
+| Warehouse overflow | Capacity check in server-side `addItem` |
+| Referral abuse | Unique `[referrerId, refereeId, tier]` + ban check |
+| Rate abuse | express-rate-limit (general 120/min, strict 30/min, auth 20/min) |
 
-### لاگ‌های امنیتی
+### Security logs
 
-هر تلاش مشکوک در جدول `security_logs` ثبت می‌شود: `CHEAT_SUSPECT`, `INVALID_INITDATA`, `RATE_LIMIT`, `AUTH_FAIL`.
-مشاهده از پنل: **📋 گزارش‌ها → 🚨 امنیتی**
+Every suspicious attempt is recorded in the `security_logs` table: `CHEAT_SUSPECT`, `INVALID_INITDATA`, `RATE_LIMIT`, `AUTH_FAIL`.
+View from the panel: **📋 Reports → 🚨 Security**
 
 ---
 
-## 📚 راهنمای ادمین
+## 📚 Admin Guide
 
-راهنمای کامل و عملیاتی (فارسی، برای مالک/ادمین بازی):
+A complete operational guide (in Persian, for the game owner/admin):
 
 **👉 [README_ADMIN.md](./README_ADMIN.md)**
 
-شامل: راه‌اندازی اولیه، مدیریت کاربران، دادن Coin/Gem، ساخت Recipe/Event/Promo Code، مدیریت اقتصاد، Broadcast، Backup، Troubleshooting و چک‌لیست‌های روزانه/هفتگی.
+Includes: initial setup, user management, giving Coin/Gem, creating Recipe/Event/Promo Code, economy management, Broadcast, Backup, Troubleshooting, and daily/weekly checklists.
 
 ---
 
-## 📁 ساختار پوشه‌ها
+## 📁 Directory Structure
 
 ```
 soda-tycoon/
@@ -434,60 +438,60 @@ soda-tycoon/
 │   ├── prisma/
 │   │   ├── schema.prisma          # PostgreSQL
 │   │   ├── schema.sqlite.prisma   # SQLite (dev)
-│   │   └── seed.js                # داده اولیه
+│   │   └── seed.js                # Initial data
 │   ├── src/
 │   │   ├── core/
-│   │   │   ├── prisma.js          # کلاینت DB
+│   │   │   ├── prisma.js          # DB client
 │   │   │   ├── telegramAuth.js    # verify initData
 │   │   │   ├── auth.js            # JWT + middlewares
-│   │   │   ├── economy.js         # قلب اقتصاد (coins/gems/xp/inventory)
+│   │   │   ├── economy.js         # Economy core (coins/gems/xp/inventory)
 │   │   │   ├── utils.js           # level, warehouse, settings, events
 │   │   │   └── middleware.js      # error handler, rate limits
-│   │   ├── routes/                # ۱۲ ماژول route
+│   │   ├── routes/                # 12 route modules
 │   │   │   ├── auth.js, player.js, factory.js, market.js,
 │   │   │   ├── delivery.js, lab.js, collection.js, social.js,
 │   │   │   ├── rewards.js, minigames.js, admin.js, botInternal.js
 │   │   ├── jobs/
-│   │   │   ├── marketEngine.js    # نوسان قیمت هر ۵ دقیقه
-│   │   │   └── completionWorker.js# تایمرهای سرور
+│   │   │   ├── marketEngine.js    # Price fluctuation every 5 minutes
+│   │   │   └── completionWorker.js# Server timers
 │   │   └── server.js
-│   ├── scripts/createAdmin.js     # ساخت اکانت ادمین
+│   ├── scripts/createAdmin.js     # Create admin account
 │   └── tests/game.test.js
 ├── minapp/               # Mini App (React)
 │   └── src/
-│       ├── pages/        # ۱۵ صفحه
+│       ├── pages/        # 15 pages
 │       ├── components/   # Tutorial, ModalHost
-│       ├── api.js        # کلاینت HTTP
+│       ├── api.js        # HTTP client
 │       ├── store.js      # Zustand state
-│       └── styles.css    # Design System (تم نوشابه)
+│       └── styles.css    # Design System (soda theme)
 ├── admin/                # Admin Panel (React)
 │   └── src/pages/        # Dashboard, Users, Content, Promos, Events, Logs...
 ├── bot/                  # Telegram Bot (telegraf)
 │   └── src/bot.js
 ├── .env.example
-└── package.json          # اسکریپت‌های ریشه
+└── package.json          # Root scripts
 ```
 
 ---
 
 ## 🛠 Troubleshooting
 
-| مشکل | راه‌حل |
+| Problem | Solution |
 |---|---|
-| `P1001: Can't reach database` | PostgreSQL روشن نیست یا `DATABASE_URL` اشتباه — یا از SQLite استفاده کنید (`npm run db:sqlite:push`) |
-| `P2021: table does not exist` | `npm run db:sqlite:push` یا `npm run db:push` اجرا نکردید |
-| Seed خطای `Unknown argument` | بعد از تغییر schema، دوباره `npm run db:sqlite:generate` بزنید |
-| پورت 3000 اشغال | `PORT=3001` در `.env` یا پروسه قبلی را kill کنید |
-| Mini App «این بازی فقط داخل تلگرام» | `initData` نیست — در تلگرام باز کنید یا `ALLOW_DEV_AUTH=true` بگذارید |
-| `AUTH_FAILED` در تلگرام | `TELEGRAM_BOT_TOKEN` در backend/.env با بات یکی نیست |
-| Bot بالا نمی‌آید `TELEGRAM_BOT_TOKEN تنظیم نشده` | `bot/.env` را بسازید و Token را بگذارید |
-| اعلان‌ها نمی‌رسند | کاربر باید `/start` را زده باشد + `notification prefs` روشن باشد |
-| 401 در Admin Panel | Token ۱۲ ساعت است — دوباره Login شوید |
-| CORS Error | Backend و Mini App یک origin باشند (در production هر دو زیر یک دامنه serve می‌شوند) |
-| Rate limit مدام | `RATE_LIMIT_MAX` را در backend/.env بالا ببرید |
+| `P1001: Can't reach database` | PostgreSQL is not running or `DATABASE_URL` is wrong — or use SQLite (`npm run db:sqlite:push`) |
+| `P2021: table does not exist` | You didn't run `npm run db:sqlite:push` or `npm run db:push` |
+| Seed error `Unknown argument` | After changing the schema, run `npm run db:sqlite:generate` again |
+| Port 3000 is busy | `PORT=3001` in `.env`, or kill the previous process |
+| Mini App "this game only works inside Telegram" | No `initData` — open it in Telegram or set `ALLOW_DEV_AUTH=true` |
+| `AUTH_FAILED` in Telegram | `TELEGRAM_BOT_TOKEN` in backend/.env does not match the bot |
+| Bot won't start "TELEGRAM_BOT_TOKEN not set" | Create `bot/.env` and put the token |
+| Notifications are not delivered | The user must have sent `/start` and enabled notification prefs |
+| 401 in Admin Panel | The token lasts 12 hours — log in again |
+| CORS Error | Backend and Mini App must share one origin (in production both are served under one domain) |
+| Rate limit triggers constantly | Raise `RATE_LIMIT_MAX` in backend/.env |
 
 ---
 
-## 📜 مجوز
+## 📜 License
 
-پروژه اختصاصی — تمام دارایی‌ها و محتوا اورجینال SODA TYCOON هستند.
+Proprietary project — all assets and content are original SODA TYCOON work.
