@@ -287,6 +287,35 @@ router.post('/trades/respond', strictLimiter, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ═════════ POST /trades/cancel ═════════
+// لغو معامله باز توسط فروشنده (بازگرداندن escrow)
+router.post('/trades/cancel', strictLimiter, async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    const { tradeId } = req.body || {};
+    const trade = await prisma.trade.findUnique({ where: { id: parseInt(tradeId, 10) }, include: { items: true } });
+    if (!trade || trade.status !== 'OPEN') throw new EconomyError('NO_TRADE', 'معامله یافت نشد');
+    if (trade.sellerId !== userId) throw new EconomyError('OWN_TRADE', 'فقط فروشنده می‌تواند لغو کند');
+
+    const offer = trade.items.find((i) => i.side === 'OFFER');
+
+    const cancelled = await prisma.trade.updateMany({
+      where: { id: trade.id, status: 'OPEN' },
+      data: { status: 'CANCELLED', closedAt: new Date() },
+    });
+    if (cancelled.count !== 1) throw new EconomyError('NO_TRADE', 'معامله دیگر باز نیست');
+
+    // بازگرداندن escrow به فروشنده
+    if (offer?.kind !== 'COIN') {
+      if (offer) await addItem(userId, offer.kind, offer.key, offer.quantity, {});
+    } else if (offer) {
+      await addCoins(userId, offer.quantity, 'TRADE', `لغو معامله #${trade.id}`);
+    }
+
+    res.json({ ok: true, cancelled: true });
+  } catch (e) { next(e); }
+});
+
 // ═════════ REFERRALS ═════════
 router.get('/referrals', async (req, res, next) => {
   try {

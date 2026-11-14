@@ -21,7 +21,9 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     setData(null);
-    api.leaderboard(board).then(setData).catch((e) => toast(e.message, 'error'));
+    // تب‌های هفتگی/روزانه باید period واقعی را بفرستند؛ وگرنه همیشه خالی می‌مانند
+    const period = board === 'WEEKLY' || board === 'DAILY' ? board : 'ALL';
+    api.leaderboard(board, period).then(setData).catch((e) => toast(e.message, 'error'));
   }, [board]);
 
   return (

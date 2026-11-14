@@ -135,6 +135,17 @@ function TradeRow({ t, me, onDone }) {
           }}>پذیرش</button>
         </div>
       )}
+      {isMine && t.status === 'OPEN' && (
+        <div className="ri-side">
+          <button className="btn btn-dark btn-sm" onClick={async () => {
+            try {
+              await api.cancelTrade(t.id);
+              toast('❌ معامله لغو شد');
+              await onDone();
+            } catch (e) { toast(e.message, 'error'); }
+          }}>لغو</button>
+        </div>
+      )}
     </div>
   );
 }

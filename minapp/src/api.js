@@ -89,6 +89,7 @@ export const api = {
   trades: () => request('/social/trades'),
   createTrade: (offer, request) => request('/social/trades/create', { method: 'POST', body: JSON.stringify({ offer, request }) }),
   respondTrade: (tradeId, accept) => request('/social/trades/respond', { method: 'POST', body: JSON.stringify({ tradeId, accept }) }),
+  cancelTrade: (tradeId) => request('/social/trades/cancel', { method: 'POST', body: JSON.stringify({ tradeId }) }),
   referrals: () => request('/social/referrals'),
 
   // Rewards

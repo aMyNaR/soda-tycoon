@@ -14,7 +14,7 @@ const express = require('express');
 const prisma = require('../core/prisma');
 const { requireUser } = require('../core/auth');
 const { getProfile, spendCoins, addXp, addItem, trackMission, checkAchievements, bumpLeaderboard, createNotification, EconomyError } = require('../core/economy');
-const { getSettingNum, getSettingJSON, getActiveEvent, warehouseCap } = require('../core/utils');
+const { getSettingNum, getSettingJSON, getActiveEvent, warehouseCap, asJSON } = require('../core/utils');
 const { strictLimiter } = require('../core/middleware');
 
 const router = express.Router();
@@ -167,12 +167,20 @@ router.post('/upgrade-storage', strictLimiter, async (req, res, next) => {
 router.get('/recipes', async (req, res, next) => {
   try {
     const profile = await getProfile(req.userId);
+    const event = await getActiveEvent();
+    const eventRecipeKeys = event?.config?.limitedRecipeKeys || [];
     const recipes = await prisma.recipe.findMany({
-      where: { active: true, OR: [{ eventOnly: false }, { eventOnly: true }] },
+      where: {
+        active: true,
+        // فقط دستورالعمل‌های رویدادیِ رویداد فعال + دستورالعمل‌های اختصاصی خود کاربر
+        AND: [
+          { OR: [{ eventOnly: false }, { eventOnly: true, key: { in: eventRecipeKeys } }] },
+          { OR: [{ custom: false }, { custom: true, creatorId: req.userId }] },
+        ],
+      },
       include: { ingredients: { include: { ingredient: true } } },
       orderBy: [{ requiredLevel: 'asc' }, { basePrice: 'asc' }],
     });
-    const event = await getActiveEvent();
     const data = recipes.map((r) => ({
       ...r,
       locked: profile.level < r.requiredLevel,
@@ -197,6 +205,17 @@ router.post('/production/start', strictLimiter, async (req, res, next) => {
     const profile = await getProfile(userId);
     const recipe = await prisma.recipe.findUnique({ where: { key: recipeKey } });
     if (!recipe || !recipe.active) throw new EconomyError('NO_RECIPE', 'فرمول یافت نشد');
+
+    // گیت فرمول‌های رویدادی و فرمول‌های اختصاصی دیگران
+    if (recipe.eventOnly) {
+      const ev = await getActiveEvent();
+      const allowed = ev?.config?.limitedRecipeKeys?.includes(recipe.key);
+      if (!allowed) throw new EconomyError('NO_RECIPE', 'این فرمول فقط در رویداد فعال قابل تولید است');
+    }
+    if (recipe.custom && recipe.creatorId !== userId) {
+      throw new EconomyError('NO_RECIPE', 'این فرمول اختصاصی شما نیست');
+    }
+
     if (profile.level < recipe.requiredLevel) {
       throw new EconomyError('LEVEL_REQUIRED', `Level ${recipe.requiredLevel} لازم است`);
     }
@@ -218,6 +237,17 @@ router.post('/production/start', strictLimiter, async (req, res, next) => {
     let speedMult = 1 + (boosts.PRODUCTION_SPEED || 0) / 100;
     if (boosts.PRODUCTION_X2) speedMult *= 2;
     if (event?.config?.prodSpeedMultiplier) speedMult *= event.config.prodSpeedMultiplier;
+
+    // بطری کلکسیونی equipped با بونوس PRODUCTION → افزایش سرعت تولید
+    const equippedBottle = await prisma.userBottle.findFirst({
+      where: { userId, equipSlot: { not: null } },
+      include: { bottle: true },
+    });
+    if (equippedBottle?.bottle) {
+      const bonus = asJSON(equippedBottle.bottle.bonus);
+      if (bonus?.type === 'PRODUCTION') speedMult *= 1 + (bonus.percent || 0) / 100;
+    }
+
     const serverSpeedMult = await getSettingNum('production_speed_mult', 1);
     speedMult *= serverSpeedMult;
 
@@ -254,6 +284,9 @@ router.post('/production/start', strictLimiter, async (req, res, next) => {
     const run = await prisma.productionRun.create({
       data: { userId, recipeId: recipe.id, lineSlot: slot, batches: recipe.batchSize, status: 'RUNNING', quality, endsAt },
     });
+
+    // شرکت در رویداد فعال (مأموریت EVENT_PARTICIPATE)
+    if (event) await trackMission(userId, 'EVENT_PARTICIPATE', 1);
 
     res.json({
       ok: true, run: { id: run.id, endsAt, lineSlot: slot, quantity: recipe.batchSize },
@@ -302,7 +335,7 @@ router.post('/production/collect', strictLimiter, async (req, res, next) => {
       const storageBoost = boosts.reduce((s, b) => s + b.boost.percent, 0);
       const cap = 100 + (profile.storageLevel - 1) * 60;
       const capWithBoost = Math.floor(cap * (1 + storageBoost / 100));
-      const used = existing ? profile.warehouseUsed : profile.warehouseUsed + recipe.batchSize;
+      const used = profile.warehouseUsed + recipe.batchSize;
       if (used > capWithBoost) throw new EconomyError('WAREHOUSE_FULL', '📦 ظرفیت انبار پر است! آن را ارتقا دهید.');
 
       if (existing) {

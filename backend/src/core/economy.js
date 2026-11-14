@@ -89,12 +89,17 @@ async function addXp(userId, baseXp, type, detail = '', multiplier = 1) {
     await tx.ledgerEntry.create({
       data: { userId, kind: 'XP', delta: gained, source: type || 'XP' },
     });
-    return { gained, newLevel: level, levelUp };
+    return { gained, newLevel: level, levelUp, oldLevel };
   });
 
   // پاداش رفرال در Level 5 و Level 10 (خارج از تراکنش اصلی)
+  // در صورت پرش چند سطحی، هر پله‌ای که رد شده جداگانه بررسی می‌شود
   if (result.levelUp) {
-    await grantReferralLevelRewards(userId, result.levelUp).catch((e) => console.error('referral level reward error', e.message));
+    for (const t of [5, 10]) {
+      if (result.oldLevel < t && result.newLevel >= t) {
+        await grantReferralLevelRewards(userId, t).catch((e) => console.error('referral level reward error', e.message));
+      }
+    }
   }
   return result;
 }
@@ -138,6 +143,8 @@ async function addItem(userId, kind, key, quantity, meta = {}) {
     });
 
     // محاسبه فضای انبار (فقط آیتم‌های انباری: INGREDIENT و SODA)
+    // مقدار جدید همیشه محاسبه می‌شود — حتی اگر ردیف موجود باشد؛ در غیر این صورت
+    // ظرفیت با تکرار خرید همان ماده دور زده می‌شد (باگ ظرفیت انبار)
     if (kind === 'INGREDIENT' || kind === 'SODA') {
       const boosts = await tx.playerBoost.findMany({
         where: { userId, expiresAt: { gt: new Date() }, boost: { type: 'STORAGE' } },
@@ -146,15 +153,13 @@ async function addItem(userId, kind, key, quantity, meta = {}) {
       const storageBoost = boosts.reduce((s, b) => s + b.boost.percent, 0);
       const cap = 100 + (profile.storageLevel - 1) * 60;
       const capWithBoost = Math.floor(cap * (1 + storageBoost / 100));
-      const used = existing
-        ? profile.warehouseUsed
-        : profile.warehouseUsed + quantity;
+      const used = profile.warehouseUsed + quantity;
       if (used > capWithBoost) {
         throw new EconomyError('WAREHOUSE_FULL', '📦 ظرفیت انبار پر است! آن را ارتقا دهید.');
       }
       await tx.playerProfile.update({
         where: { userId },
-        data: { warehouseUsed: existing ? profile.warehouseUsed : used },
+        data: { warehouseUsed: used },
       });
     }
 
@@ -241,7 +246,11 @@ async function checkAchievements(userId) {
   const friends = await prisma.friendship.count({
     where: { status: 'ACCEPTED', OR: [{ requesterId: userId }, { addresseeId: userId }] },
   });
-  const cities = await prisma.delivery.findFirst({ where: { userId } });
+  // شهرهای تحویل‌شده (تعداد شهرهای متمایز) — به‌جای تخمین قبلی
+  const deliveredCityGroups = await prisma.delivery.groupBy({
+    by: ['cityId'],
+    where: { userId, status: { in: ['ARRIVED', 'CLAIMED'] } },
+  });
   const customRecipes = await prisma.recipe.count({ where: { creatorId: userId, custom: true } });
 
   const stats = {
@@ -253,7 +262,7 @@ async function checkAchievements(userId) {
     FACTORY_TIER: profile.factory?.tier || 1,
     BOTTLES_OWNED: new Set(bottles.map((b) => b.bottleId)).size,
     FRIENDS_COUNT: friends,
-    CITIES_UNLOCKED: cities ? 2 : 1, // تقریبی — در deliveries قابل محاسبه دقیق‌تر
+    CITIES_UNLOCKED: 1 + deliveredCityGroups.length, // تهران (پایه) + هر شهر ارسال‌شده
     MYTHIC_BOTTLE: bottles.filter((b) => b.bottle.rarity === 'MYTHIC').length,
     CUSTOM_RECIPE: customRecipes,
   };

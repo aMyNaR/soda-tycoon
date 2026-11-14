@@ -21,7 +21,7 @@ const SECRET_COMBOS = {
   'strawberry_flavor+lemon_flavor': { key: 'strawberry_lemon_energy', name: 'Strawberry Lemon Energy', emoji: '⚡', rarity: 'RARE', basePrice: 110, flavor: 'CUSTOM', requiredLevel: 12, productionMs: 8 * 60000, batchSize: 14, xpReward: 38, demand: 1.4, qualityBonus: 6, ingredients: [['water', 3], ['sugar', 4], ['strawberry_flavor', 1], ['lemon_flavor', 1], ['energy_formula', 1], ['co2', 2], ['bottle', 1], ['cap', 1]] },
   'cola_flavor+energy_formula':     { key: 'turbo_cola', name: 'Turbo Cola', emoji: '⚡', rarity: 'RARE', basePrice: 125, flavor: 'CUSTOM', requiredLevel: 15, productionMs: 9 * 60000, batchSize: 14, xpReward: 42, demand: 1.4, qualityBonus: 7, ingredients: [['water', 3], ['sugar', 4], ['cola_flavor', 1], ['energy_formula', 1], ['co2', 2], ['bottle', 1], ['cap', 1]] },
   'grape_flavor+galaxy_dust':       { key: 'nebula_grape', name: 'Nebula Grape', emoji: '🌌', rarity: 'EPIC', basePrice: 240, flavor: 'CUSTOM', requiredLevel: 30, productionMs: 15 * 60000, batchSize: 16, xpReward: 66, demand: 1.5, qualityBonus: 10, ingredients: [['water', 4], ['sugar', 6], ['grape_flavor', 1], ['galaxy_dust', 1], ['co2', 2], ['bottle', 1], ['cap', 1]] },
-  'lemon_flavor+ice_cubes':         { key: 'frozen_lemon', name: 'Frozen Lemon', emoji: '❄️', rarity: 'RARE', basePrice: 130, flavor: 'CUSTOM', requiredLevel: 18, productionMs: 10 * 60000, batchSize: 14, xpReward: 44, demand: 1.4, qualityBonus: 8, ingredients: [['water', 3], ['sugar', 4], ['lemon_flavor', 1], ['co2', 2], ['bottle', 1], ['cap', 1]] },
+  'mango_flavor+rainbow_extract':   { key: 'mango_rainbow', name: 'Mango Rainbow Fizz', emoji: '🌈', rarity: 'EPIC', basePrice: 220, flavor: 'CUSTOM', requiredLevel: 24, productionMs: 12 * 60000, batchSize: 15, xpReward: 58, demand: 1.5, qualityBonus: 9, ingredients: [['water', 4], ['sugar', 5], ['mango_flavor', 1], ['rainbow_extract', 1], ['co2', 2], ['bottle', 1], ['cap', 1]] },
 };
 
 // ترکیب دو طعم → فرمول جدید
@@ -156,11 +156,22 @@ router.post('/experiment', strictLimiter, async (req, res, next) => {
       prisma.ingredient.findUnique({ where: { key: flavorB } }),
     ]);
 
-    // اگر قبلاً همین ترکیب را ساخته، همان را برگردان
-    const existing = await prisma.recipe.findFirst({
-      where: { custom: true, creatorId: userId, name: { contains: `${ingA.name.split(' ').pop()}` } },
+    // اگر قبلاً دقیقاً همین ترکیب را ساخته، به‌جای ساخت فرمول جدید همان را برگردان (منع تکثیر نامحدود)
+    const myCustom = await prisma.recipe.findMany({
+      where: { creatorId: userId, custom: true },
+      include: { ingredients: true },
     });
-    void existing;
+    const existing = myCustom.find((r) => {
+      const ids = r.ingredients.map((i) => i.ingredientId);
+      return ids.includes(ingA.id) && ids.includes(ingB.id);
+    });
+    if (existing) {
+      await addXp(userId, 10, 'LAB', 'تکرار ترکیب شناخته‌شده');
+      return res.json({
+        ok: true, secret: false, reused: true,
+        recipe: { key: existing.key, name: existing.name, emoji: existing.emoji, rarity: existing.rarity, basePrice: existing.basePrice },
+      });
+    }
 
     const rarity = Math.random() < 0.15 ? 'RARE' : Math.random() < 0.4 ? 'UNCOMMON' : 'COMMON';
     const basePrice = Math.round((ingA.basePrice + ingB.basePrice) * (2.2 + Math.random()));

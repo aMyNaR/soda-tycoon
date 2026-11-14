@@ -8,7 +8,7 @@
 const express = require('express');
 const prisma = require('../core/prisma');
 const { requireUser } = require('../core/auth');
-const { addCoins, addGems, addXp, bumpLeaderboard, logSecurity, EconomyError } = require('../core/economy');
+const { addCoins, addGems, addXp, bumpLeaderboard, trackMission, logSecurity, EconomyError } = require('../core/economy');
 const { getSettingJSON, getSettingNum, dayKey } = require('../core/utils');
 const { strictLimiter } = require('../core/middleware');
 
@@ -66,6 +66,7 @@ router.post('/submit', strictLimiter, async (req, res, next) => {
     await prisma.minigameReward.create({
       data: { userId, game, rewardCoins: coins, rewardXp: xp, rewardGems: gems, day: today },
     });
+    await trackMission(userId, 'MINIGAME', 1);
 
     res.json({ ok: true, rewarded: true, coins, xp, gems });
   } catch (e) { next(e); }
